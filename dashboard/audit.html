@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Journal d'audit · Surveillance HSE</title>
+  <link rel="stylesheet" href="/assets/hse.css">
+  <style>
+    :root{
+      --panel:#ffffff;--soft:#f6f9f7;--line:#d9e4dc;--text:#1d3326;--muted:#6b7d71;
+      --green:#25833e;--green-soft:#e5f3e8;--red:#d23b3b;--red-soft:#fdeaea;--amber:#d98200;--amber-soft:#fff3df;
+      --gray-soft:#eef0ee;--violet:#7d2896;--violet-soft:#f5e9f8;
+    }
+    *{box-sizing:border-box}
+    [hidden]{display:none !important}
+    body{margin:0;background:var(--bg);color:var(--text);font:13px/1.45 "Segoe UI",system-ui,Arial,sans-serif}
+    .layout{max-width:1500px;margin:0 auto;padding:18px 24px}
+    h2{font-size:14px;margin:0}
+    .subtitle{margin:2px 0 0;color:var(--muted);font-size:11px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:11px;font-weight:600;color:var(--text);text-decoration:none}
+    .tabs{display:flex;gap:6px;margin:16px 0 12px}
+    .tabs button{border:1px solid var(--line);border-radius:999px;padding:6px 14px;background:var(--panel);cursor:pointer;font-weight:600;color:var(--text)}
+    .tabs button.active{background:var(--green);border-color:var(--green);color:#fff}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 16px #1d33260d;margin-bottom:14px}
+    .panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    .panel-body{padding:12px 14px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+    label.field span{display:block;color:var(--muted);font-size:11px;margin-bottom:3px}
+    input,select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);font:inherit}
+    .btn{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--soft);color:var(--text);cursor:pointer;font-weight:600}
+    .btn:hover{border-color:var(--green)}
+    .btn.primary{background:var(--green);border-color:var(--green);color:#fff}
+    .btn.small{padding:3px 9px;font-size:11px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{text-align:left;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:7px 8px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+    td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+    tr:hover td{background:var(--soft)}
+    .table-wrap{max-height:62vh;overflow:auto}
+    code{font-family:Consolas,monospace;font-size:11px;color:#3d5546;word-break:break-word}
+    .tag{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--gray-soft);color:var(--muted);white-space:nowrap}
+    .tag.systeme{background:var(--gray-soft)}
+    .tag.alert{background:var(--red);color:#fff}
+    .tag.ok{background:var(--green);color:#fff}
+    .tag.admin{background:var(--violet-soft);color:var(--violet)}
+    .tag.responsable_hse{background:var(--amber-soft);color:#8a5200}
+    .tag.operateur{background:var(--green-soft);color:var(--green)}
+    .result{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--soft)}
+    .result.bad{border-color:#efb8b8;background:var(--red-soft)}
+    .result.good{border-color:#b5d9be;background:var(--green-soft)}
+    .result ul{margin:6px 0 0;padding-left:18px}
+    .notice{margin:12px 0;padding:10px 12px;border-radius:10px;border:1px solid #efb8b8;background:var(--red-soft);color:#8a2424}
+    .hint{color:var(--muted);font-size:11px;margin:8px 0 0}
+    .grid2{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px}
+    form.stack label{display:block;margin-top:8px}
+    form.stack input,form.stack select{width:100%}
+    @media (max-width:1000px){.grid2{grid-template-columns:1fr}}
+    @media (max-width:560px){.layout{padding:12px 16px}}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/live"><img src="/assets/logo.svg" alt="Logo"><span><b>Surveillance HSE</b><small>Site industriel · Preuve de concept</small></span></a>
+    <nav class="mainnav" aria-label="Navigation principale">
+      <a href="/live">Surveillance vidéo</a>
+      <a href="/zones">Zones</a>
+      <a href="/audit" aria-current="page">Audit</a>
+    </nav>
+    <div class="who"><span id="user-name">—</span><button id="logout" type="button">Déconnexion</button></div>
+  </div>
+</header>
+<div class="page-head"><div class="title-card"><h1>Journal d'audit et comptes</h1><p>Accès administrateur · journal chaîné SHA-256 et signé HMAC</p></div></div>
+<div class="layout">
+
+  <div id="error" class="notice" hidden></div>
+
+  <div class="tabs">
+    <button data-tab="journal" class="active">Journal</button>
+    <button data-tab="comptes">Comptes</button>
+  </div>
+
+  <section id="tab-journal">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Vérification</h2>
+        <button id="verify" class="btn primary">Vérifier l'intégrité</button>
+      </div>
+      <div class="panel-body">
+        <p class="hint">Recalcule le chaînage SHA-256 et les signatures HMAC du journal (comme <code>tools/verify_audit.py</code>), puis compare le journal à alerts_log.csv, aux fichiers incidents.json, aux captures et à users.json.</p>
+        <div id="verify-result" hidden></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Entrées du journal <span id="entry-count" class="tag">0</span></h2>
+        <form id="filters" class="filters">
+          <label class="field"><span>Du</span><input type="date" name="du"></label>
+          <label class="field"><span>Au</span><input type="date" name="au"></label>
+          <label class="field"><span>Utilisateur</span><select name="utilisateur"><option value="">Tous</option></select></label>
+          <label class="field"><span>Événement</span><select name="evenement"><option value="">Tous</option></select></label>
+          <button class="btn" type="submit">Filtrer</button>
+          <button class="btn" type="reset">Réinitialiser</button>
+        </form>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Date</th><th>Utilisateur</th><th>Événement</th><th>Détails</th><th>Empreinte</th></tr></thead>
+          <tbody id="entries"><tr><td colspan="6">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-comptes" hidden>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><h2>Comptes</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Identifiant</th><th>Rôle</th><th>État</th><th>Dernière connexion</th><th>Créé par</th><th>Actions</th></tr></thead>
+            <tbody id="users"></tbody>
+          </table>
+        </div>
+        <p class="hint" style="padding:0 14px 12px">Les comptes ne sont jamais supprimés : ils sont désactivés. Impossible de désactiver son propre compte ou le dernier administrateur actif. Toutes les opérations sont journalisées.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Nouveau compte</h2></div>
+        <div class="panel-body">
+          <form id="create" class="stack">
+            <label class="field"><span>Identifiant (a-z, 0-9, . _ -)</span><input name="username" required minlength="3" maxlength="32" autocomplete="off"></label>
+            <label class="field"><span>Rôle</span><select name="role">
+              <option value="operateur">Opérateur — consultation</option>
+              <option value="responsable_hse">Responsable HSE — actions</option>
+              <option value="admin">Administrateur — comptes et audit</option>
+            </select></label>
+            <label class="field"><span>Mot de passe initial (12 caractères minimum)</span><input name="password" type="password" required minlength="12" autocomplete="new-password"></label>
+            <button class="btn primary" type="submit" style="margin-top:12px;width:100%">Créer le compte</button>
+          </form>
+          <p class="hint">Transmettre le mot de passe initial de vive voix ; le titulaire pourra demander sa réinitialisation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const $ = (selector) => document.querySelector(selector);
+  const ROLE_LABELS = { operateur: "Opérateur", responsable_hse: "Responsable HSE", admin: "Administrateur", systeme: "Système", console: "Console" };
+  let me = null;
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function showError(message) { $("#error").textContent = message || ""; $("#error").hidden = !message; }
+  async function api(path, body) {
+    const options = body === undefined ? { cache: "no-store" } : {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    };
+    const response = await fetch(path, options);
+    if (response.status === 401) { location.replace("/login?next=/audit"); throw new Error("Session expirée."); }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Erreur ${response.status}`);
+    return data;
+  }
+  const fmt = (iso) => iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "medium" }) : "—";
+
+  // ---------------- Journal
+  function summarize(data) {
+    return Object.entries(data || {}).filter(([, v]) => v !== null && v !== "")
+      .map(([k, v]) => `${k} : ${typeof v === "object" ? JSON.stringify(v) : v}`).join(" · ");
+  }
+  async function loadEntries() {
+    const params = new URLSearchParams(new FormData($("#filters")));
+    for (const [key, value] of [...params]) if (!value) params.delete(key);
+    const data = await api(`/api/audit?${params}`);
+    $("#entry-count").textContent = data.total;
+    for (const [name, values] of [["utilisateur", data.users], ["evenement", data.events]]) {
+      const select = $(`#filters [name=${name}]`);
+      const current = select.value;
+      select.innerHTML = `<option value="">Tous</option>` + values.map((v) => `<option>${escapeHtml(v)}</option>`).join("");
+      select.value = current;
+    }
+    $("#entries").innerHTML = data.entries.length ? data.entries.map((e) => {
+      const alert = /echouee|bloque|anomalie|alerte|refusee/.test(e.event);
+      const user = e.utilisateur || "systeme";
+      return `<tr><td>${e.seq}</td><td>${fmt(e.ts)}</td>
+        <td>${escapeHtml(user)} <span class="tag ${escapeHtml(e.role || "systeme")}">${escapeHtml(ROLE_LABELS[e.role] || e.role || "système")}</span></td>
+        <td><span class="tag ${alert ? "alert" : ""}">${escapeHtml(e.event)}</span></td>
+        <td><code>${escapeHtml(summarize(e.data))}</code></td>
+        <td><code title="${escapeHtml(e.hash)}">${escapeHtml((e.hash || "").slice(0, 12))}…</code></td></tr>`;
+    }).join("") : '<tr><td colspan="6">Aucune entrée pour ces filtres.</td></tr>';
+  }
+  $("#filters").addEventListener("submit", (event) => { event.preventDefault(); loadEntries().catch((e) => showError(e.message)); });
+  $("#filters").addEventListener("reset", () => setTimeout(() => loadEntries().catch((e) => showError(e.message))));
+
+  $("#verify").addEventListener("click", async () => {
+    $("#verify").disabled = true;
+    try {
+      const { integrity, consistency } = await api("/api/audit/verify", {});
+      const ok = integrity.ok && consistency.ok;
+      const box = $("#verify-result");
+      box.className = `result ${ok ? "good" : "bad"}`;
+      box.innerHTML =
+        `<strong>Journal : ${integrity.ok ? `intact (${integrity.count} entrées, chaînage et signatures valides)` : `ALTÉRÉ — ${integrity.errors.length} anomalie(s)`}</strong>` +
+        (integrity.errors.length ? `<ul>${integrity.errors.slice(0, 30).map((e) => `<li>${escapeHtml(e)}</li>`).join("")}</ul>` : "") +
+        (integrity.warnings.length ? `<ul>${integrity.warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul>` : "") +
+        `<br><strong>Cohérence : ${consistency.ok ? "aucune différence avec les fichiers d'incidents et de comptes" : `${consistency.count} anomalie(s)`}</strong>` +
+        (consistency.anomalies.length ? `<ul>${consistency.anomalies.map((a) => `<li>${escapeHtml(a.objet)} — ${escapeHtml(a.detail)}</li>`).join("")}</ul>` : "");
+      box.hidden = false;
+      loadEntries();
+    } catch (error) { showError(error.message); }
+    finally { $("#verify").disabled = false; }
+  });
+
+  // ---------------- Comptes
+  async function loadUsers() {
+    const { users } = await api("/api/users");
+    $("#users").innerHTML = users.map((u) => {
+      const self = u.username === me.username;
+      const actions = [
+        `<button class="btn small" data-action="password" data-user="${escapeHtml(u.username)}">Réinitialiser le mot de passe</button>`,
+        u.active
+          ? (self ? "" : `<button class="btn small" data-action="disable" data-user="${escapeHtml(u.username)}">Désactiver</button>`)
+          : `<button class="btn small" data-action="enable" data-user="${escapeHtml(u.username)}">Réactiver</button>`,
+        u.locked ? `<button class="btn small" data-action="unlock" data-user="${escapeHtml(u.username)}">Débloquer</button>` : "",
+      ].join(" ");
+      return `<tr><td><strong>${escapeHtml(u.username)}</strong>${self ? " (vous)" : ""}</td>
+        <td><span class="tag ${escapeHtml(u.role)}">${escapeHtml(ROLE_LABELS[u.role])}</span></td>
+        <td>${u.active ? '<span class="tag ok">actif</span>' : '<span class="tag">désactivé</span>'}${u.locked ? ' <span class="tag alert">bloqué</span>' : ""}</td>
+        <td>${fmt(u.last_login)}</td><td>${escapeHtml(u.created_by || "—")}</td><td>${actions}</td></tr>`;
+    }).join("");
+  }
+  $("#users").addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const username = button.dataset.user;
+    try {
+      if (button.dataset.action === "password") {
+        const password = prompt(`Nouveau mot de passe pour « ${username} » (12 caractères minimum) :`);
+        if (!password) return;
+        await api("/api/users/password", { username, password });
+      } else if (button.dataset.action === "unlock") {
+        await api("/api/users/unlock", { username });
+      } else {
+        const active = button.dataset.action === "enable";
+        if (!active && !confirm(`Désactiver le compte « ${username} » ? Ses sessions ouvertes seront fermées.`)) return;
+        await api("/api/users/active", { username, active });
+      }
+      showError("");
+      loadUsers();
+    } catch (error) { showError(error.message); }
+  });
+  $("#create").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    try {
+      await api("/api/users/create", { username: form.username.value.trim(), role: form.role.value, password: form.password.value });
+      form.reset();
+      showError("");
+      loadUsers();
+    } catch (error) { showError(error.message); }
+  });
+
+  // ---------------- Onglets, session
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
+    $("#tab-journal").hidden = b.dataset.tab !== "journal";
+    $("#tab-comptes").hidden = b.dataset.tab !== "comptes";
+    if (b.dataset.tab === "comptes") loadUsers().catch((e) => showError(e.message));
+  }));
+  $("#logout").addEventListener("click", async () => {
+    try { await api("/api/logout", {}); } finally { location.replace("/login"); }
+  });
+  api("/api/me").then((user) => {
+    me = user;
+    $("#user-name").textContent = `${user.username} · ${user.role_label}`;
+    return loadEntries();
+  }).catch((error) => showError(error.message));
+</script>
+</body>
+</html>

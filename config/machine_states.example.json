@@ -1,0 +1,17 @@
+{
+  "_comment": "État déclaré des équipements mobiles. Aucune donnée automate (PLC / PI System) n'est connectée au POC : l'état est saisi par un opérateur via l'interface ou écrit dans ce fichier par une passerelle externe. unknown_policy : 'prudent' (S-HSE-22 : un état non confirmé est traité comme une machine en marche) ou 'surveillance' (événement à vérifier, sans alerte critique). max_age_s : au-delà, un état déclaré redevient 'inconnu' (null = pas d'expiration). Ce fichier est l'état par défaut versionné : config/machine_states.json (non versionné, état d'exécution) en est copié au premier démarrage s'il n'existe pas. Chaque déclaration est tracée dans le journal d'audit (etat_machine_modifie).",
+  "unknown_policy": "prudent",
+  "max_age_s": null,
+  "machines": {
+    "engin_pilote": {
+      "state": "inconnu",
+      "source": "valeur par défaut",
+      "updated_at": null
+    },
+    "engin_demo_1": {
+      "state": "inconnu",
+      "source": "valeur par défaut",
+      "updated_at": null
+    }
+  }
+}

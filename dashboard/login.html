@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Connexion · Surveillance HSE</title>
+  <link rel="stylesheet" href="/assets/hse.css">
+</head>
+<body>
+<div class="login">
+  <section class="login-side">
+    <div>
+      <h1>Surveillance HSE</h1>
+      <p>Site industriel · comportements, homme-machine et zones dangereuses. Accès réservé au personnel autorisé.</p>
+    </div>
+    <div class="login-logo"><img src="/assets/logo.svg" alt="Logo"></div>
+    <ul>
+      <li>Preuve de concept : données capteurs simulées.</li>
+    </ul>
+  </section>
+  <main class="login-main">
+    <form id="login" class="login-form" autocomplete="on">
+      <h2>Connexion</h2>
+      <p class="sub">Identifiant nominatif fourni par l'administrateur</p>
+      <label for="username">Identifiant</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+      <label for="password">Mot de passe</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button id="submit" type="submit">Se connecter</button>
+      <div id="error" class="login-error" hidden></div>
+      <p class="login-hint">Session fermée après 30 min d'inactivité. Compte bloqué 15 min après 5 échecs. Toutes les connexions sont journalisées.</p>
+    </form>
+  </main>
+</div>
+<script>
+  const form = document.getElementById("login");
+  const errorBox = document.getElementById("error");
+  // Retour à la page demandée, uniquement vers une page de ce site
+  const next = new URLSearchParams(location.search).get("next");
+  const target = next && /^\/(?!\/)[\w\-/]*$/.test(next) ? next : "/live";
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorBox.hidden = true;
+    document.getElementById("submit").disabled = true;
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: form.username.value.trim(), password: form.password.value }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `Erreur ${response.status}`);
+      location.replace(target);
+    } catch (error) {
+      errorBox.textContent = error.message;
+      errorBox.hidden = false;
+      form.password.value = "";
+      form.password.focus();
+    } finally {
+      document.getElementById("submit").disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

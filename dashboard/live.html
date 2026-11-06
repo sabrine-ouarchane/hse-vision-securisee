@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Surveillance temps réel | HSE</title>
+  <link rel="stylesheet" href="/assets/hse.css">
+  <style>
+    /* Page /live : uniquement ce qui lui est propre ; couleurs et composants communs dans /assets/hse.css */
+    body{font-size:13px}
+    button,select{font:inherit}
+    .hint{color:var(--muted);font-size:12px;margin:8px 0 0}
+    .muted{color:var(--muted)}
+    .notice{margin:0 0 var(--gap);padding:10px 12px;border-radius:var(--radius);border:1px solid #efb8b8;background:var(--st-danger-soft);color:#8e1c1c}
+    .consistency-banner{margin:0 0 var(--gap);padding:10px 14px;border-radius:var(--radius);background:var(--st-danger);color:#fff;font-weight:600}
+    .consistency-banner a{color:#fff}
+
+    /* Tuiles d'indicateurs */
+    .kpis.six{grid-template-columns:repeat(6,minmax(0,1fr))}
+    .kpi b.val{display:flex;align-items:center;gap:8px;font-size:18px;line-height:1.55}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--st-off);flex:none}
+    .dot.on,.dot.ok{background:var(--st-normal)}
+    .dot.on{box-shadow:0 0 0 3px #0b7a7533;animation:pulse 1.6s infinite}
+    .dot.bad{background:var(--st-cyber);box-shadow:0 0 0 3px #6a2c9133;animation:pulse 1.2s infinite}
+    @keyframes pulse{50%{box-shadow:0 0 0 6px #0000}}
+    @media (prefers-reduced-motion:reduce){.dot.on,.dot.bad{animation:none}}
+
+    .split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:var(--gap);align-items:start}
+    .split > *{min-width:0}
+
+    /* Flux vidéo */
+    .cyber-banner{padding:9px 16px;background:var(--st-cyber);color:#fff;font-weight:700}
+    .cyber-banner small{display:block;font-weight:400;opacity:.92}
+    /* Image brute avant la première analyse : même orange que l'« à vérifier » (texte blanc 4,7) */
+    .pending-banner{padding:9px 16px;background:var(--st-vigil);color:#fff;font-weight:700}
+    .pending-banner small{display:block;font-weight:400;opacity:.92}
+    .video-wrap{position:relative;background:#0d1511;min-height:420px;display:grid;place-items:center;overflow:hidden}
+    .video-wrap img{display:block;max-width:100%;max-height:calc(100vh - 230px);object-fit:contain}
+    .placeholder{color:#c3d0c8;text-align:center;padding:40px;max-width:480px}
+    .placeholder strong{display:block;color:#fff;font-size:15px;margin-bottom:6px}
+    /* Légende du dessin sur l'image : couleurs exactes d'app/visualization/overlay.py */
+    .overlay-key{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:12px}
+    .overlay-key div{display:flex;align-items:center;gap:7px}
+    .sw{width:16px;height:10px;border-radius:3px;flex:none}
+
+    /* Colonne latérale */
+    label.field{display:block;margin-bottom:10px}
+    label.field span{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}
+    select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+    .check{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}
+    .actions{display:flex;gap:8px;margin-top:12px}
+    .actions .button{flex:1}
+    .button:disabled{opacity:.45;cursor:not-allowed}
+    .upload{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+    .upload input[type=file]{width:100%;font-size:12px}
+    .upload .button{width:100%}
+    .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .seg button{border:1px solid var(--line);border-radius:8px;padding:8px 6px;background:#fff;cursor:pointer;font-weight:600;font-size:13px;color:var(--text)}
+    .seg button:hover{border-color:var(--ocp-dark)}
+    .seg button.active[data-state=marche]{background:var(--st-danger);border-color:var(--st-danger);color:#fff}
+    .seg button.active[data-state=arret]{background:var(--st-normal);border-color:var(--st-normal);color:#fff}
+    .seg button.active[data-state=inconnu]{background:var(--st-vigil);border-color:var(--st-vigil);color:#fff}
+    .declared{margin:10px 0 0;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:12px}
+    .readonly-note{color:var(--muted);font-size:12px;margin:8px 0 0}
+    .people{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+    .person{border:1px solid var(--line);border-left:4px solid var(--st-off);border-radius:8px;padding:7px 9px}
+    .person.violation{border-left-color:var(--st-danger)}
+    .person.a_verifier{border-left-color:var(--st-vigil-fill)}
+    .person.conforme{border-left-color:var(--st-normal)}
+    .person-head{display:flex;justify-content:space-between;align-items:center;font-weight:700}
+    .items{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+    .item{font-size:11px;padding:1px 7px;border-radius:6px;border:1px solid var(--line);background:#fff;font-weight:600;color:var(--text)}
+    .item.present{color:var(--st-normal);border-color:#b7dcd9}
+    .item.absent,.item.detecte,.item.danger{color:#fff;background:var(--st-danger);border-color:var(--st-danger)}
+    .item.a_verifier{color:var(--st-vigil);border-color:#f2cf98}
+    .item.muted{color:var(--muted)}
+    .empty{color:var(--muted);padding:10px 0;text-align:center}
+
+    /* Incidents en chronologie */
+    .filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .filters button{border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:var(--text)}
+    .filters button.active{background:var(--ocp-dark);border-color:var(--ocp-dark);color:#fff}
+    .filters .check{margin:0 0 0 auto}
+    .incidents{max-height:640px;overflow:auto;margin-top:12px;padding-right:4px}
+    .group-title{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:4px 0 10px;font-weight:700}
+    .incidents .timeline{margin-bottom:16px}
+    .incident{display:grid;grid-template-columns:88px minmax(0,1fr);gap:12px}
+    .incident img,.incident .noimg{width:88px;height:66px;object-fit:cover;border-radius:6px;background:var(--st-off-soft)}
+    .incident img{cursor:zoom-in}
+    .incident.archived{opacity:.7}
+    .incident-title{font-weight:700;margin-top:3px}
+    .incident-meta{color:var(--muted);font-size:12px;margin-top:2px}
+    .incident-msg{margin-top:3px}
+    .review{margin-top:6px;font-size:12px;color:var(--muted)}
+    .review strong{color:var(--text)}
+    .review-actions{display:flex;gap:6px;margin-top:6px}
+    .caps{display:flex;flex-wrap:wrap;gap:5px}
+
+    dialog{border:none;border-radius:12px;padding:0;max-width:90vw;max-height:90vh}
+    dialog img{display:block;max-width:90vw;max-height:85vh}
+    dialog::backdrop{background:#0d1511cc}
+    dialog.form{padding:18px;width:min(440px,90vw)}
+    dialog.form textarea{width:100%;min-height:90px;margin:8px 0;padding:8px;border:1px solid var(--line);border-radius:8px;font:inherit}
+    dialog.form .actions{justify-content:flex-end}
+    dialog.form .actions .button{flex:none}
+
+    @media (max-width:1300px){.kpis.six{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media (max-width:1150px){.split{grid-template-columns:minmax(0,1fr)}}
+    @media (max-width:560px){.kpis.six{grid-template-columns:repeat(2,minmax(0,1fr))}.overlay-key{grid-template-columns:1fr}.video-wrap{min-height:240px}}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/live"><img src="/assets/logo.svg" alt="Logo"><span><b>Surveillance HSE</b><small>Site industriel · Preuve de concept</small></span></a>
+    <nav class="mainnav" aria-label="Navigation principale">
+      <a href="/live" aria-current="page">Surveillance vidéo</a>
+      <a href="/zones">Zones</a>
+      <a id="audit-link" hidden href="/audit">Audit</a>
+    </nav>
+    <div class="who"><span id="user-name">—</span><span id="user-role" class="role"></span><button id="logout" type="button">Déconnexion</button></div>
+  </div>
+</header>
+<div class="page-head"><div class="title-card"><h1>Surveillance vidéo — comportements et homme-machine</h1><p>Site industriel · Preuve de concept</p></div></div>
+<main class="page">
+
+  <div id="consistency-banner" class="consistency-banner" hidden></div>
+  <div id="error" class="notice" hidden></div>
+
+  <div class="kpis six">
+    <div class="kpi" id="t-analysis"><span>Analyse</span><b class="val"><i id="live-dot" class="dot"></i><span id="live-label">Arrêtée</span></b>
+      <small><span id="s-fps">—</span> · latence <span id="s-latency">—</span></small></div>
+    <div class="kpi" id="t-persons"><span>Personnes</span><b id="s-persons">—</b><small>suivies dans l'image</small></div>
+    <div class="kpi" id="t-violations"><span>Violations</span><b id="s-violations">—</b><small>EPI ou téléphone, confirmées</small></div>
+    <div class="kpi" id="t-verify"><span>À vérifier</span><b id="s-verify">—</b><small>indices non confirmés</small></div>
+    <div class="kpi" id="t-prox"><span>Proximités</span><b id="s-prox">—</b><small>homme-engin</small></div>
+    <div class="kpi" id="t-camera" title="Contrôle d'intégrité de l'image (sabotage caméra)"><span>Caméra</span><b class="val"><i id="cam-dot" class="dot"></i><span id="cam-label">—</span></b>
+      <small>contrôle de sabotage</small></div>
+  </div>
+
+  <div class="split">
+    <section class="card">
+      <div class="card-head">
+        <div><h2 id="camera-title">Flux analysé</h2><p id="camera-sub">Sélectionne une source puis démarre l'analyse.</p></div>
+        <div class="aside"><span id="mode-pill" class="chip">—</span></div>
+      </div>
+      <div id="cyber-banner" class="cyber-banner" hidden></div>
+      <div id="pending-banner" class="pending-banner" role="status" hidden>Analyse en cours — aucune détection affichée pour l'instant
+        <small>Image brute, en attente de la première analyse : l'absence de cadre ne signifie pas l'absence de violation.</small></div>
+      <div class="video-wrap">
+        <img id="stream" alt="Flux vidéo annoté" hidden>
+        <div id="placeholder" class="placeholder"><strong>Aucune analyse en cours</strong>Les détections s'afficheront image par image, à la cadence d'analyse réelle du poste. Sur CPU, des images sont ignorées pour rester en temps réel ; leur nombre est indiqué.</div>
+      </div>
+      <div class="card-body">
+        <div class="overlay-key">
+          <div><span class="sw" style="background:var(--st-danger)"></span>Violation confirmée (stable dans le temps)</div>
+          <div><span class="sw" style="background:var(--st-vigil-fill)"></span>À vérifier : indice non confirmé</div>
+          <div><span class="sw" style="background:var(--st-normal)"></span>Conforme : EPI requis confirmés</div>
+          <div><span class="sw" style="background:var(--st-off)"></span>Indéterminé : preuves insuffisantes</div>
+          <div><span class="sw" style="border:1px solid #888;background:#fff"></span>Trait fin : détection brute du modèle</div>
+          <div><span class="sw" style="background:repeating-linear-gradient(90deg,var(--text) 0 4px,transparent 4px 7px)"></span>Pointillés : engin, couleur de son état déclaré</div>
+          <div><span class="sw" style="background:var(--st-cyber)"></span>Violet : surveillance compromise (sabotage caméra)</div>
+        </div>
+        <p class="hint">Mêmes couleurs d'état que le reste de l'application ; chaque cadre porte aussi son libellé écrit.</p>
+        <p id="stats-detail" class="hint"></p>
+      </div>
+    </section>
+
+    <aside>
+      <section class="card">
+        <div class="card-head"><div><h2>Source vidéo</h2><p>Caméra ou vidéo de simulation</p></div></div>
+        <div class="card-body">
+          <label class="field"><span>Source</span><select id="source"></select></label>
+          <label class="check"><input id="harness" type="checkbox"> Harnais exigé (travail en hauteur &gt; 1,80 m, S-HSE-SEC-29)</label>
+          <div class="actions needs-hse">
+            <button id="start" class="button primary" type="button">Démarrer l'analyse</button>
+            <button id="stop" class="button" type="button" disabled>Arrêter</button>
+          </div>
+          <p class="readonly-note only-readonly" hidden>Consultation seule : démarrer, arrêter ou ajouter une vidéo est réservé au responsable HSE.</p>
+          <p class="hint">Une vidéo est lue à sa cadence d'origine, comme un flux caméra : rien n'est pré-calculé.</p>
+          <div class="upload needs-hse">
+            <label class="field"><span>Ajouter une nouvelle vidéo de test</span>
+              <input id="upload-file" type="file" accept=".mp4,.avi,.mov,.mkv,video/*">
+            </label>
+            <button id="upload" class="button primary" type="button" disabled>Ajouter et analyser</button>
+            <p id="upload-status" class="hint">La vidéo est copiée dans data/test_videos puis analysée en direct. Les incidents des vidéos précédentes restent dans l'historique.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>État de l'engin</h2><p>Déclaré par une personne : jamais déduit de l'image</p></div><div class="aside"><span id="machine-id" class="chip">—</span></div></div>
+        <div class="card-body">
+          <div class="seg needs-hse" id="machine-seg">
+            <button data-state="marche" type="button">En marche</button>
+            <button data-state="arret" type="button">À l'arrêt</button>
+            <button data-state="inconnu" type="button">Inconnu</button>
+          </div>
+          <label class="field needs-hse" style="margin-top:10px"><span>Si l'état est inconnu</span>
+            <select id="policy">
+              <option value="prudent">Prudent : traité comme en marche (S-HSE-22)</option>
+              <option value="surveillance">Surveillance : événement à vérifier</option>
+            </select>
+          </label>
+          <p id="machine-source" class="declared">Aucun automate n'est connecté : l'état est déclaré par l'opérateur et n'est jamais déduit de l'image.</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><div><h2>Personnes suivies</h2><p>Conformité EPI par personne</p></div><div class="aside"><span id="people-count" class="chip num">0</span></div></div>
+        <div class="card-body"><div id="people" class="people"><p class="empty">Aucune personne détectée.</p></div></div>
+      </section>
+    </aside>
+  </div>
+
+  <div class="split">
+    <section class="card">
+      <div class="card-head"><div><h2>Incidents — toutes les vidéos</h2><p>Une entrée par situation confirmée, pas par image · conservés entre les vidéos et après redémarrage</p></div>
+        <div class="aside"><span id="incident-count" class="chip num">0</span></div></div>
+      <div class="card-body">
+        <div class="filters" id="incident-filter">
+          <button data-filter="all" class="active" type="button">Toutes les vidéos</button>
+          <button data-filter="current" type="button">Vidéo en cours</button>
+          <button data-filter="cyber" type="button">Cyber (caméra)</button>
+          <label class="check"><input id="show-archived" type="checkbox"> Afficher les archivés</label>
+        </div>
+        <div id="incidents" class="incidents"><p class="empty">Aucun incident enregistré.</p></div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><div><h2>Capacités et limites</h2><p>Ce que le modèle sait détecter sur cette source</p></div></div>
+      <div class="card-body">
+        <div id="caps" class="caps"></div>
+        <ul class="hint" style="padding-left:16px;margin:10px 0 0">
+          <li>L'absence d'un casque n'est confirmée qu'après une observation stable (≥ 1 s, majorité d'images) ; une tête hors champ ou une personne trop éloignée reste « indéterminée ».</li>
+          <li>Téléphone : modèle COCO pré-entraîné appliqué au recadrage de chaque personne (la classe « Phone » du modèle fine-tuné n'est pas fiable).</li>
+          <li>Distances homme-engin sans calibration : exprimées en hauteurs de personne, jamais en mètres.</li>
+          <li>Modèle entraîné sur des données publiques : performances à valider sur le périmètre pilote.</li>
+          <li>Sabotage caméra : seuls les effets visibles sur l'image sont détectés (obstruction, déplacement, flou/éblouissement, flux figé, rejeu). Aucune protection réseau n'est assurée par ce POC.</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</main>
+
+<dialog id="zoom"><img alt="Capture de l'incident"></dialog>
+<dialog id="archive-dialog" class="form">
+  <form method="dialog" id="archive-form">
+    <strong id="archive-title">Archiver l'incident</strong>
+    <p class="hint">L'incident n'est pas supprimé : il est masqué de la vue principale (filtre « Afficher les archivés »). Motif, auteur et date sont conservés et journalisés.</p>
+    <textarea id="archive-motif" maxlength="500" required placeholder="Motif (obligatoire) : ex. fausse alerte vérifiée sur la capture, doublon…"></textarea>
+    <div class="actions"><button class="button" value="cancel" formnovalidate>Annuler</button><button class="button primary" value="ok">Archiver</button></div>
+  </form>
+</dialog>
+
+<script>
+  const $ = (selector) => document.querySelector(selector);
+  const ITEM_LABELS = { casque: "Casque", gilet: "Gilet", harnais: "Harnais", telephone: "Téléphone" };
+  const STATE_LABELS = {
+    present: "OK", absent: "absent", a_verifier: "à vérifier", indetermine: "indéterminé",
+    non_visible: "non visible", non_requis: "non requis", detecte: "détecté", non: "non", hors_zone: "hors zone active",
+  };
+  const CYBER_KINDS = new Set(["obstruction", "deplacement", "image_degradee", "flux_fige", "rejeu"]);
+  const STATUS_LABELS = { violation: "Violation", a_verifier: "À vérifier", conforme: "Conforme", indetermine: "Indéterminé" };
+  // États communs de hse.css et catégories d'incident (mêmes étiquettes que la page /zones)
+  const STATUS_STATE = { violation: "danger", a_verifier: "vigil", conforme: "normal", indetermine: "off" };
+  const CATEGORY = { casque: "EPI", gilet: "EPI", harnais: "EPI", telephone: "Téléphone", proximite: "Proximité" };
+  const categoryChip = (kind) => CYBER_KINDS.has(kind) ? '<span class="chip cyber">Cyber</span>' : `<span class="chip cat">${CATEGORY[kind] || escapeHtml(kind)}</span>`;
+  // Durées toujours au même format : « 5 s », « 49 min 25 s », « 2 h 05 min »
+  function duration(seconds) {
+    seconds = Math.round(seconds || 0);
+    if (seconds < 60) return `${seconds} s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ${String(seconds % 60).padStart(2, "0")} s`;
+    return `${Math.floor(seconds / 3600)} h ${String(Math.floor(seconds % 3600 / 60)).padStart(2, "0")} min`;
+  }
+  const decimal = (value, digits) => value.toFixed(digits).replace(".", ",");
+  function setTile(id, cls) { $(id).className = `kpi${cls ? " " + cls : ""}`; }
+  const SITUATION_LABELS = {
+    danger: "Proximité dangereuse", danger_etat_inconnu: "Proximité · état machine inconnu",
+    a_verifier: "Proximité à vérifier", vigilance: "Vigilance", machine_arretee: "Proche engin à l'arrêt",
+  };
+  let sources = [];
+  let currentSession = null;
+  let starting = false;
+  let models = { state: "chargement" };
+  let preparing = [];  // vidéos en cours de conversion 1280 px (arrière-plan)
+  let currentMachine = null;
+  let machineStates = new Map();
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function showError(message) {
+    const box = $("#error");
+    box.textContent = message || "";
+    box.hidden = !message;
+  }
+  async function api(path, body) {
+    const options = body === undefined ? { cache: "no-store" } : {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    };
+    const response = await fetch(path, options);
+    if (response.status === 401) { location.replace("/login?next=/live"); throw new Error("Session expirée."); }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Erreur ${response.status}`);
+    return data;
+  }
+  // Rôle de l'utilisateur : masque seulement les commandes ; le serveur les refuse de toute façon.
+  const ROLE_RANK = { operateur: 0, responsable_hse: 1, admin: 2 };
+  let me = { username: "", role: "operateur" };
+  const canManage = () => ROLE_RANK[me.role] >= 1;
+  async function loadMe() {
+    me = await api("/api/me");
+    $("#user-name").textContent = me.username;
+    $("#user-role").textContent = me.role_label;
+    $("#audit-link").hidden = me.role !== "admin";
+    document.querySelectorAll(".needs-hse").forEach((el) => { el.hidden = !canManage(); });
+    document.querySelectorAll(".only-readonly").forEach((el) => { el.hidden = canManage(); });
+  }
+  $("#logout").addEventListener("click", async () => {
+    try { await api("/api/logout", {}); } finally { location.replace("/login"); }
+  });
+
+  async function loadSources() {
+    const data = await api("/api/live/sources");
+    sources = data.sources;
+    machineStates = new Map(data.machines.map((m) => [m.machine_id, m]));
+    const videos = sources.filter((s) => s.kind === "video");
+    const cameras = sources.filter((s) => s.kind === "camera");
+    $("#source").innerHTML =
+      `<optgroup label="Vidéos de simulation (data/test_videos)">${videos.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.label)} — ${escapeHtml(s.filename)}</option>`).join("")}</optgroup>` +
+      `<optgroup label="Caméras">${cameras.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.label)}</option>`).join("")}</optgroup>`;
+    $("#policy").value = data.unknown_policy;
+    syncSourceOptions();
+  }
+  function syncSourceOptions() {
+    const source = sources.find((s) => s.id === $("#source").value);
+    if (!source) return;
+    $("#harness").checked = !!source.harness_required;
+    if (source.machine_id && !(currentSession && document.querySelector("#live-dot.on"))) {
+      currentMachine = source.machine_id;
+      $("#machine-id").textContent = source.machine_id;
+      const known = machineStates.get(source.machine_id);
+      document.querySelectorAll("#machine-seg button").forEach((b) => b.classList.toggle("active", !!known && b.dataset.state === known.state));
+    }
+  }
+
+  // Modèles chargés en arrière-plan au démarrage du serveur : bouton bloqué tant qu'ils ne sont pas prêts.
+  function syncStartButton() {
+    if (starting) return;
+    const loading = models.state === "chargement";
+    // vidéo sélectionnée encore en conversion : un clic attend la fin de sa préparation
+    const video = $("#source").value.startsWith("video:") && preparing.includes($("#source").value.slice(6));
+    $("#start").disabled = loading;
+    $("#start").textContent = loading ? "Chargement des modèles…" : (video ? "Préparation de la vidéo…" : "Démarrer l'analyse");
+  }
+  async function start() {
+    showError("");
+    starting = true;
+    $("#start").disabled = true;
+    $("#start").textContent = "Préparation de la vidéo…";
+    try {
+      const status = await api("/api/live/start", {
+        source: $("#source").value, harness_required: $("#harness").checked,
+      });
+      attachStream(status.session_id);
+      render(status);
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      starting = false;
+      syncStartButton();
+    }
+  }
+  async function stop() {
+    try { await api("/api/live/stop", {}); } catch (error) { showError(error.message); }
+    refresh();
+  }
+  async function setMachineState(state) {
+    if (!currentMachine) return;
+    try {
+      await api("/api/live/machine-state", { machine_id: currentMachine, state, unknown_policy: $("#policy").value });
+      refresh();
+    } catch (error) { showError(error.message); }
+  }
+
+  function chip(item, state) {
+    const muted = ["indetermine", "non_visible", "non_requis", "non", "hors_zone"].includes(state);
+    const cls = muted ? "muted" : state;
+    return `<span class="item ${cls}">${ITEM_LABELS[item]} : ${STATE_LABELS[state] || state}</span>`;
+  }
+  function renderPeople(status) {
+    const persons = status.persons || [];
+    const situations = new Map((status.situations || []).map((s) => [s.track_id, s]));
+    $("#people-count").textContent = persons.length;
+    if (!persons.length) { $("#people").innerHTML = '<p class="empty">Aucune personne détectée.</p>'; return; }
+    const order = { violation: 0, a_verifier: 1, indetermine: 2, conforme: 3 };
+    $("#people").innerHTML = persons.slice().sort((a, b) => order[a.status] - order[b.status]).map((p) => {
+      const sit = situations.get(p.track_id);
+      const distance = sit ? (sit.distance_m != null ? `${decimal(sit.distance_m, 1)} m` : `${decimal(sit.distance_rel, 1)}× hauteur pers.`) : "";
+      return `<div class="person ${p.status}">
+        <div class="person-head"><span>Personne #${p.track_id ?? "?"}</span><span class="badge ${STATUS_STATE[p.status] || "off"}">${STATUS_LABELS[p.status]}</span></div>
+        <div class="items">${["casque", "gilet", "harnais", "telephone"].map((k) => chip(k, p.items[k] || "indetermine")).join("")}
+        ${sit ? `<span class="item ${sit.severity === "critique" ? "danger" : "a_verifier"}">${SITUATION_LABELS[sit.status]} · ${distance}</span>` : ""}</div>
+        ${p.reasons && p.reasons.length ? `<div class="incident-meta">${escapeHtml(p.reasons.join(" · "))}</div>` : ""}
+      </div>`;
+    }).join("");
+  }
+  let incidentFilter = "all";
+  let lastIncidentsKey = "";
+  function incidentCard(i) {
+    const img = i.snapshot ? `<img src="/api/live/snapshot/${encodeURIComponent(i.session_id)}/${encodeURIComponent(i.snapshot)}" alt="Capture incident ${i.id}" loading="lazy">` : '<div class="noimg"></div>';
+    const time = new Date(i.wall_time).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "medium" });
+    const cyber = CYBER_KINDS.has(i.kind);
+    const who = cyber ? "caméra" : `pers. ${i.track_ids.map((t) => "#" + t).join(", ")}`;
+    const open = i.status === "active";
+    const state = open ? '<span class="badge solid danger">En cours</span>'
+      : `<span class="chip">Clos${i.recovered ? "" : ` · ${duration(i.duration_s)}`}</span>`;
+    return `<li class="${open ? "open" : ""}${cyber ? " cyber" : ""}"><div class="incident ${i.review && i.review.archive_par ? "archived" : ""}">${img}
+      <div>
+        <time>${time}</time> · ${categoryChip(i.kind)} ${state}
+          ${i.frozen ? `<span class="chip cyber">gelé depuis ${escapeHtml(i.frozen_since || "?")}</span>` : ""}
+        <div class="incident-title">#${i.id} · ${escapeHtml(i.label)}</div>
+        <div class="incident-msg">${escapeHtml(i.message)}</div>
+        <div class="incident-meta">gravité ${escapeHtml(i.severity)} · ${escapeHtml(who)}${i.recovered ? " · reconstitué depuis le journal" : ""}
+          ${i.close_reason ? ` · ${escapeHtml(i.close_reason)}` : ""}
+          ${i.peak_confidence ? ` · confiance max ${decimal(i.peak_confidence, 2)}` : ""}</div>
+        ${reviewBlock(i)}
+      </div></div></li>`;
+  }
+  function frTime(iso) {
+    return iso ? new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }) : "";
+  }
+  function reviewBlock(i) {
+    const r = i.review || {};
+    const lines = [];
+    if (r.acquitte_par) lines.push(`Acquitté par <strong>${escapeHtml(r.acquitte_par)}</strong> le ${frTime(r.acquitte_le)}`);
+    if (r.archive_par) lines.push(`Archivé par <strong>${escapeHtml(r.archive_par)}</strong> le ${frTime(r.archive_le)} — motif : « ${escapeHtml(r.motif_archivage)} »`);
+    const ref = `data-session="${escapeHtml(i.session_id)}" data-id="${i.id}"`;
+    const actions = canManage() && !i.recovered && (!r.acquitte_par || !r.archive_par)
+      ? `<div class="review-actions">${r.acquitte_par ? "" : `<button class="button small" type="button" data-action="ack" ${ref}>Acquitter</button>`}${r.archive_par ? "" : `<button class="button small" type="button" data-action="archive" ${ref}>Archiver…</button>`}</div>`
+      : "";
+    return (lines.length ? `<div class="review">${lines.join("<br>")}</div>` : "") + actions;
+  }
+  function renderIncidents(status) {
+    let incidents = status.all_incidents || [];
+    if (incidentFilter === "current") incidents = incidents.filter((i) => i.session_id === status.session_id);
+    if (incidentFilter === "cyber") incidents = incidents.filter((i) => CYBER_KINDS.has(i.kind));
+    const showArchived = $("#show-archived").checked;
+    if (!showArchived) incidents = incidents.filter((i) => !(i.review && i.review.archive_par));
+    $("#incident-count").textContent = incidents.length;
+    // Ne reconstruit la liste que si elle a changé (évite de recharger les captures chaque seconde)
+    const key = incidentFilter + showArchived + JSON.stringify(incidents.map((i) => [i.session_id, i.id, i.status, i.duration_s, i.frozen, i.review]));
+    if (key === lastIncidentsKey) return;
+    lastIncidentsKey = key;
+    if (!incidents.length) { $("#incidents").innerHTML = '<p class="empty">Aucun incident enregistré.</p>'; return; }
+    const groups = [];
+    for (const incident of incidents) {
+      const last = groups[groups.length - 1];
+      if (last && last.session_id === incident.session_id) last.items.push(incident);
+      else groups.push({ session_id: incident.session_id, video: incident.video, items: [incident] });
+    }
+    $("#incidents").innerHTML = groups.map((g) => {
+      const current = g.session_id === status.session_id;
+      const date = g.session_id.replace(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/, "$3/$2/$1 $4:$5");
+      return `<div class="group-title"><span>${escapeHtml(g.video)} · ${date}</span>
+        <span class="chip">${current ? (status.running ? "vidéo en cours" : "dernière vidéo") : `${g.items.length} incident(s)`}</span></div>` +
+        `<ul class="timeline">${g.items.map(incidentCard).join("")}</ul>`;
+    }).join("");
+  }
+  function attachStream(sessionId) {
+    if (!sessionId || sessionId === currentSession) return;
+    currentSession = sessionId;
+    $("#stream").src = `/api/live/stream?session=${encodeURIComponent(sessionId)}`;
+    $("#stream").hidden = false;
+    $("#placeholder").hidden = true;
+  }
+
+  async function uploadAndStart() {
+    const file = $("#upload-file").files[0];
+    if (!file) return;
+    showError("");
+    $("#upload").disabled = true;
+    try {
+      const saved = await new Promise((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", "/api/live/upload");
+        request.setRequestHeader("Content-Type", "application/octet-stream");
+        request.setRequestHeader("X-Filename", encodeURIComponent(file.name));
+        request.upload.onprogress = (event) => {
+          if (event.lengthComputable) $("#upload-status").textContent = `Envoi : ${Math.round(event.loaded / event.total * 100)} %`;
+        };
+        request.onload = () => {
+          let data = {};
+          try { data = JSON.parse(request.responseText); } catch (error) { /* réponse vide */ }
+          request.status === 200 ? resolve(data) : reject(new Error(data.error || `Erreur ${request.status}`));
+        };
+        request.onerror = () => reject(new Error("Envoi impossible."));
+        request.send(file);
+      });
+      $("#upload-status").textContent = `${saved.filename} ajoutée. Préparation et démarrage de l'analyse…`;
+      await loadSources();
+      $("#source").value = saved.source;
+      syncSourceOptions();
+      await start();
+      $("#upload-status").textContent = `${saved.filename} : analyse en cours. Elle reste disponible dans la liste des vidéos.`;
+      $("#upload-file").value = "";
+    } catch (error) {
+      showError(error.message);
+      $("#upload-status").textContent = "Échec de l'ajout.";
+    } finally {
+      $("#upload").disabled = !$("#upload-file").files.length;
+    }
+  }
+  function render(status) {
+    const running = !!status.running;
+    $("#live-dot").classList.toggle("on", running);
+    $("#live-label").textContent = running ? "En cours" : (status.session_id ? "Terminée" : "Arrêtée");
+    setTile("#t-analysis", running ? "normal" : "");
+    $("#stop").disabled = !running;
+    models = status.models || models;
+    preparing = status.videos_en_preparation || preparing;
+    syncStartButton();
+    if (models.state === "erreur" && !starting) showError(`Chargement des modèles impossible : ${models.error}`);
+    renderIncidents(status);
+    if (!status.session_id) return;
+    attachStream(status.session_id);  // vidéo terminée : affiche sa dernière image analysée
+    const stats = status.stats || {};
+    const counts = status.counts || {};
+    $("#camera-title").textContent = status.camera_name || "Flux analysé";
+    $("#camera-sub").textContent = `${status.source} · session ${status.session_id}${status.harness_required ? " · harnais exigé" : ""}`;
+    $("#mode-pill").textContent = status.is_camera ? "Caméra en direct" : "Vidéo lue en temps réel";
+    $("#s-persons").textContent = counts.persons ?? "—";
+    $("#s-violations").textContent = counts.violations ?? "—";
+    $("#s-verify").textContent = counts.a_verifier ?? "—";
+    $("#s-prox").textContent = counts.proximites ?? "—";
+    setTile("#t-violations", counts.violations ? "danger" : "");
+    setTile("#t-verify", counts.a_verifier ? "vigil" : "");
+    setTile("#t-prox", counts.proximites ? "danger" : "");
+    $("#s-fps").textContent = stats.analysis_fps ? `${decimal(stats.analysis_fps, 1)} analyses/s` : "—";
+    $("#s-latency").textContent = stats.latency_ms != null ? `${stats.latency_ms} ms` : "—";
+    $("#stats-detail").textContent =
+      `Source ${stats.source_fps ?? "?"} img/s · ${stats.analysed} image(s) analysée(s) · ${stats.skipped} ignorée(s) pour rester en temps réel` +
+      ` · inférence ${stats.inference_ms ?? "—"} ms · t vidéo ${stats.media_t ?? 0} s` +
+      (stats.ended ? " · fin de la vidéo" : "");
+    if (stats.error) showError(stats.error);
+    $("#pending-banner").hidden = !(running && stats.preview);
+
+    renderIntegrity(status.camera_integrity || {});
+
+    const machine = status.machine || {};
+    currentMachine = status.machine_id;
+    $("#machine-id").textContent = status.machine_id || "—";
+    document.querySelectorAll("#machine-seg button").forEach((b) => b.classList.toggle("active", b.dataset.state === machine.state));
+    $("#policy").value = status.unknown_policy || "prudent";
+    $("#machine-source").textContent = machine.updated_at
+      ? `État « ${machine.state} » déclaré par ${machine.source} à ${new Date(machine.updated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}. Aucun automate n'est connecté.`
+      : "Aucun automate n'est connecté : l'état est déclaré par l'opérateur et n'est jamais déduit de l'image.";
+
+    const caps = status.capabilities || {};
+    $("#caps").innerHTML = ["casque", "gilet", "harnais", "telephone", "engin"].map((k) =>
+      `<span class="item ${caps[k] ? "present" : "muted"}">${k === "engin" ? "Engin" : ITEM_LABELS[k]} : ${caps[k] ? "détectable" : "non détectable"}</span>`).join("") +
+      (caps.telephone_source ? `<span class="item muted">Téléphone : ${escapeHtml(caps.telephone_source)}</span>` : "");
+    renderPeople(status);
+  }
+  const INTEGRITY_LABELS = { fiable: "Fiable", compromise: "Compromise", initialisation: "Référence en cours", desactive: "Contrôle désactivé" };
+  function renderIntegrity(camera) {
+    const state = camera.state || "initialisation";
+    $("#cam-dot").className = "dot " + (state === "compromise" ? "bad" : state === "fiable" ? "ok" : "");
+    setTile("#t-camera", state === "compromise" ? "cyber" : state === "fiable" ? "normal" : "");
+    $("#cam-label").textContent = INTEGRITY_LABELS[state] || state;
+    $("#t-camera small").textContent = state === "fiable" && camera.suspected && camera.suspected.length
+      ? "anomalie en observation" : "contrôle de sabotage";
+    const active = camera.active || [];
+    $("#cyber-banner").hidden = !active.length;
+    if (active.length) {
+      $("#cyber-banner").innerHTML = `SURVEILLANCE COMPROMISE — ${active.map((e) => escapeHtml(e.label)).join(" · ")}` +
+        `<small>${escapeHtml(active[0].detail)} · depuis ${active[0].duration_s.toFixed(0)} s. Aucune personne ne peut être déclarée conforme tant que l'image n'est pas fiable.</small>`;
+    }
+  }
+  async function refresh() {
+    try { render(await api("/api/live/status")); } catch (error) { showError(error.message); }
+  }
+
+  $("#source").addEventListener("change", () => { syncSourceOptions(); syncStartButton(); });
+  $("#start").addEventListener("click", start);
+  $("#stop").addEventListener("click", stop);
+  document.querySelectorAll("#machine-seg button").forEach((b) => b.addEventListener("click", () => setMachineState(b.dataset.state)));
+  $("#policy").addEventListener("change", () => {
+    const active = document.querySelector("#machine-seg button.active");
+    setMachineState(active ? active.dataset.state : "inconnu");
+  });
+  let archiveTarget = null;
+  $("#incidents").addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (button) {
+      const target = { session_id: button.dataset.session, incident_id: Number(button.dataset.id) };
+      if (button.dataset.action === "ack") {
+        try { await api("/api/incidents/ack", target); showError(""); lastIncidentsKey = ""; refresh(); }
+        catch (error) { showError(error.message); }
+      } else {
+        archiveTarget = target;
+        $("#archive-title").textContent = `Archiver l'incident #${target.incident_id}`;
+        $("#archive-motif").value = "";
+        $("#archive-dialog").showModal();
+      }
+      return;
+    }
+    if (event.target.tagName !== "IMG") return;
+    $("#zoom img").src = event.target.src;
+    $("#zoom").showModal();
+  });
+  $("#archive-dialog").addEventListener("close", async () => {
+    if ($("#archive-dialog").returnValue !== "ok" || !archiveTarget) return;
+    try {
+      await api("/api/incidents/archive", { ...archiveTarget, motif: $("#archive-motif").value });
+      showError(""); lastIncidentsKey = ""; refresh();
+    } catch (error) { showError(error.message); }
+    archiveTarget = null;
+  });
+  $("#show-archived").addEventListener("change", () => { lastIncidentsKey = ""; refresh(); });
+  $("#zoom").addEventListener("click", () => $("#zoom").close());
+  $("#upload-file").addEventListener("change", () => { $("#upload").disabled = !$("#upload-file").files.length; });
+  $("#upload").addEventListener("click", uploadAndStart);
+  document.querySelectorAll("#incident-filter button").forEach((b) => b.addEventListener("click", () => {
+    incidentFilter = b.dataset.filter;
+    document.querySelectorAll("#incident-filter button").forEach((x) => x.classList.toggle("active", x === b));
+    refresh();
+  }));
+
+  // Incohérence entre le journal d'audit et les fichiers d'incidents ou de comptes
+  async function refreshConsistency() {
+    try {
+      const report = await api("/api/consistency");
+      $("#consistency-banner").hidden = report.ok !== false;
+      $("#consistency-banner").innerHTML = report.ok === false
+        ? `Incohérence détectée entre le journal d'audit et les fichiers d'incidents ou de comptes : ${report.count} anomalie(s) (contrôle du ${new Date(report.checked_at).toLocaleString("fr-FR")}).` +
+          (me.role === "admin" ? ` <a href="/audit">Voir le détail</a>` : " Prévenir un administrateur.")
+        : "";
+    } catch (error) { /* contrôle indisponible : pas de bandeau */ }
+  }
+  loadMe().then(loadSources).then(refresh).then(refreshConsistency).catch((error) => showError(error.message));
+  setInterval(refreshConsistency, 30000);
+  setInterval(refresh, 1000);
+  // Quand l'analyse en cours se termine, la dernière image reste affichée (le flux s'arrête de lui-même).
+</script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "_comment": "Profil par source vidéo (nom de fichier) ou caméra. 'default' s'applique à toute source sans profil dédié. calibration.image_points (px, ordre quelconque mais cohérent) et ground_points_m (mètres au sol) activent l'affichage des distances en mètres ; sans calibration, les distances restent relatives (hauteurs de personne).",
+  "default": {
+    "name": "Caméra pilote",
+    "harness_required": false,
+    "phone_active_area": "whole_frame",
+    "machine_id": "engin_pilote",
+    "calibration": null,
+    "camera_fixe": true,
+    "tamper_reference": null
+  },
+  "sources": {
+    "homme_machine2.mp4": {
+      "name": "Engin mobile (démonstration)",
+      "machine_id": "engin_demo_1",
+      "zone_id": "parcs"
+    },
+    "test1.mp4": {
+      "name": "Chantier — accès bâtiment",
+      "camera_fixe": false
+    },
+    "just_phone.mp4": {
+      "name": "Téléphone en zone active (démonstration)",
+      "camera_fixe": false
+    },
+    "just_hardhat.mp4": {
+      "name": "Port du casque (démonstration)",
+      "camera_fixe": false
+    },
+    "nothing_test.mp4": {
+      "name": "Personnes sans EPI (démonstration)",
+      "camera_fixe": false
+    }
+  },
+  "_comment_zones": "zone_id (optionnel) : zone du site (config/zones.json) filmée par cette caméra. La présence de personnes, les proximités et l'état de la caméra analysés dans /live alimentent alors le niveau de cette zone sur la page /zones.",
+  "_comment_securite": "camera_fixe (défaut true) : false pour une caméra tenue à la main ou panoramique — le contrôle de déplacement (sabotage) est alors désactivé. tamper_reference (optionnel) : image de référence de la caméra saine (chemin relatif au projet) ; sinon la référence est prise en début de session."
+}

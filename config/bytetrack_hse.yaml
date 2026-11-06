@@ -1,0 +1,12 @@
+# ByteTrack pour le POC HSE (base : réglages par défaut d'ultralytics).
+# track_buffer augmenté : les personnes disparaissent souvent quelques
+# instants derrière la poussière ou un engin ; garder leur piste plus
+# longtemps évite de leur attribuer un nouvel identifiant (et un nouvel
+# incident) à leur réapparition.
+tracker_type: bytetrack
+track_high_thresh: 0.3
+track_low_thresh: 0.1
+new_track_thresh: 0.4
+track_buffer: 60
+match_thresh: 0.8
+fuse_score: True

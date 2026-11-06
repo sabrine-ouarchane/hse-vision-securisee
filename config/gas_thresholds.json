@@ -1,0 +1,20 @@
+{
+  "demo_only": true,
+  "zones": ["zone_pilote_1"],
+  "gases": {
+    "O2_pct": {
+      "unit": "%",
+      "warning_min": 19.8,
+      "warning_max": 23.0,
+      "critical_min": 19.5,
+      "critical_max": 23.5,
+      "normal": 20.9
+    },
+    "SO2_ppm": {"unit": "ppm", "warning": 1.5, "critical": 2.0, "normal": 0.3},
+    "H2S_ppm": {"unit": "ppm", "warning": 7.5, "critical": 10.0, "normal": 0.5},
+    "CO_ppm": {"unit": "ppm", "warning": 20.0, "critical": 25.0, "normal": 2.0},
+    "NH3_ppm": {"unit": "ppm", "warning": 20.0, "critical": 25.0, "normal": 0.4},
+    "Explosivity_pct_LIE": {"unit": "% LIE", "warning": 4.0, "critical": 5.0, "normal": 0.5},
+    "Temp_C": {"unit": "°C", "warning": 32.0, "critical": 35.0, "normal": 26.0}
+  }
+}

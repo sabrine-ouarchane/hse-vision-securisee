@@ -1,0 +1,16 @@
+{
+  "zones": [
+    {
+      "id": "zone_pilote_1",
+      "type": "zone_machine",
+      "description": "Perimetre pilote (adapter le polygone a la scene reelle de la video)",
+      "polygon_relative": [
+        [0.33, 0.29],
+        [1.0,  0.33],
+        [1.0,  1.0],
+        [0.0,  1.0],
+        [0.0,  0.62]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+/*
+ * dashboard/assets/hse.css — style commun des pages /login, /live, /zones et /audit.
+ *
+ * Deux familles de couleurs, à ne jamais mélanger :
+ * - identité OCP (en-tête, logo, boutons principaux, connexion) : --ocp-* ;
+ * - états de risque (normal, vigilance, danger, hors surveillance, cyber) : --st-*,
+ *   réservés aux niveaux de risque et identiques sur toutes les pages. Le vert
+ *   « normal » est volontairement distinct du vert OCP.
+ * Contraste (texte blanc sur la couleur) : --ocp-dark 5,7 ; --st-normal 5,2 ;
+ * --st-vigil 4,7 ; --st-danger 5,6 ; --st-off 5,5 ; --st-cyber 8,8. Le vert OCP
+ * #4a8e39 (4,0) et le vert-jaune #b3c51b (1,9) ne portent jamais de texte blanc.
+ * Aucune police ni ressource externe (CSP : style-src 'self').
+ */
+:root{
+  --ocp:#4a8e39;--ocp-dark:#3a7330;--ocp-deep:#24481f;--ocp-lime:#b3c51b;
+
+  --st-normal:#0b7a75;--st-normal-soft:#e2f3f2;
+  --st-vigil:#b25e00;--st-vigil-fill:#f0a020;--st-vigil-soft:#fff2dc;
+  --st-danger:#c62828;--st-danger-soft:#fde8e8;
+  --st-off:#5f6b73;--st-off-soft:#eceff1;
+  --st-cyber:#6a2c91;--st-cyber-soft:#f1e8f7;
+
+  --bg:#f2f6ec;--card:#fff;--line:#dde3e0;--text:#1b2a22;--muted:#5d6b63;
+  --radius:10px;--gap:16px;
+  --font:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 var(--font)}
+:focus-visible{outline:3px solid var(--ocp-lime);outline-offset:2px}
+
+/* ------------------------------------------------------------------ en-tête commun */
+.topbar{background:var(--ocp-deep);color:#fff;border-bottom:4px solid var(--ocp-lime)}
+.topbar-in{max-width:1680px;margin:0 auto;padding:8px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.topbar .brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none}
+.topbar .brand img{height:38px;background:#fff;border-radius:8px;padding:3px}
+.topbar .brand b{display:block;font-size:16px;line-height:1.2}
+.topbar .brand small{display:block;font-size:11px;opacity:.8}
+.mainnav{display:flex;gap:4px;flex-wrap:wrap}
+.mainnav a{color:#fff;text-decoration:none;padding:8px 14px;border-radius:8px;font-weight:600;opacity:.85}
+.mainnav a:hover{background:#ffffff1a;opacity:1}
+.mainnav a[aria-current="page"]{background:#ffffff26;opacity:1;box-shadow:inset 0 -3px 0 var(--ocp-lime)}
+.topbar .status{display:flex;gap:6px;flex-wrap:wrap}
+.topbar .status .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:0;border-radius:999px;background:#ffffff1f;font-size:12px;font-weight:600;color:#fff}
+.topbar .who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
+.topbar .who .role{background:#ffffff26;padding:2px 9px;border-radius:999px;font-size:11px}
+.topbar .who button{background:none;border:1px solid #ffffff73;color:#fff;border-radius:8px;padding:5px 11px;cursor:pointer;font:inherit;font-size:12px}
+.topbar .who button:hover{background:#ffffff1a}
+
+/*
+ * Bandeau OCP sous l'en-tête (≈ 160 px), derrière le titre et les premières cartes, qui le chevauchent.
+ * Texte blanc sur ce dégradé : 4,0 au mieux (côté vert foncé), 1,9 côté vert-jaune, donc insuffisant pour
+ * un texte courant (4,5). Aucun texte n'y est posé directement : le titre est dans une carte blanche.
+ * Le bas du bandeau (padding-bottom) est la zone de chevauchement : elle ne recouvre jamais le titre.
+ */
+.page-head{min-height:160px;padding:18px max(20px, calc(50% - 820px)) 84px;background:linear-gradient(90deg,#4a8e39 0%,#5f9837 35%,#b3c51b 100%)}
+.page-head .title-card{display:inline-block;max-width:100%;background:var(--card);border-radius:var(--radius);padding:10px 16px;box-shadow:0 2px 10px #1b2a2226}
+.page-head h1{font-size:20px;margin:0;line-height:1.3}
+.page-head p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.page-head + .page,.page-head + .layout{position:relative;margin-top:-76px}
+
+/* ------------------------------------------------------------------ composants des pages */
+.page{max-width:1680px;margin:0 auto;padding:var(--gap) 20px 40px}
+.num{font-variant-numeric:tabular-nums}
+
+/* Cartes blanches : titre, sous-titre, action à droite */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 1px 3px #1b2a2212;margin-bottom:var(--gap);min-width:0}
+.card-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.card-head h2{font-size:15px;margin:0;line-height:1.3}
+.card-head p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.card-head .aside{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-body{padding:14px 16px}
+.section-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:26px 0 12px}
+.section-title h2{font-size:17px;margin:0}
+.section-title .aside{margin-left:auto}
+
+/* Badges d'état : pastille + mot, jamais la couleur seule */
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;line-height:1.6}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.badge.normal{background:var(--st-normal-soft);color:var(--st-normal)}
+.badge.vigil{background:var(--st-vigil-soft);color:var(--st-vigil)}
+.badge.danger{background:var(--st-danger-soft);color:var(--st-danger)}
+.badge.off{background:var(--st-off-soft);color:var(--st-off)}
+.badge.cyber{background:var(--st-cyber-soft);color:var(--st-cyber)}
+.badge.solid.danger{background:var(--st-danger);color:#fff}
+.badge.solid.normal{background:var(--st-normal);color:#fff}
+.badge.lg{font-size:13px;padding:4px 12px}
+/* Étiquettes neutres : catégorie d'incident (sauf cyber, en violet), statut clos, mentions */
+.chip{display:inline-block;padding:1px 8px;border-radius:6px;font-size:11px;font-weight:600;background:var(--bg);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.chip.cat{background:#fff;color:var(--text);font-weight:700}
+.chip.cyber{background:var(--st-cyber-soft);border-color:#dcc6ea;color:var(--st-cyber);font-weight:700}
+
+/* Boutons */
+.button{border:1px solid var(--line);background:#fff;color:var(--text);border-radius:8px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.button:hover{border-color:var(--ocp-dark)}
+.button.primary{background:var(--ocp-dark);border-color:var(--ocp-dark);color:#fff}
+.button.primary:hover{background:var(--ocp-deep)}
+.button.danger{background:var(--st-danger);border-color:var(--st-danger);color:#fff}
+.button.small{padding:4px 10px;font-size:12px}
+
+/* Indicateurs clés */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap);margin-bottom:var(--gap)}
+.kpi{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--st-off);border-radius:var(--radius);padding:12px 14px;min-width:0}
+.kpi > span{display:block;color:var(--muted);font-size:12px;font-weight:600}
+.kpi b{display:block;font-size:28px;line-height:1.2;margin-top:4px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi.normal{border-left-color:var(--st-normal)}.kpi.normal b{color:var(--st-normal)}
+.kpi.vigil{border-left-color:var(--st-vigil)}.kpi.vigil b{color:var(--st-vigil)}
+.kpi.danger{border-left-color:var(--st-danger)}.kpi.danger b{color:var(--st-danger)}
+.kpi.cyber{border-left-color:var(--st-cyber)}.kpi.cyber b{color:var(--st-cyber)}
+
+/* Tableaux de données */
+.data{width:100%;border-collapse:collapse;font-size:13px}
+.data th{text-align:left;font-size:11px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+.data td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.data .num{text-align:right;white-space:nowrap}
+
+/* Légende */
+.key{display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+.key span{display:inline-flex;align-items:center;gap:5px}
+.key i{display:inline-block;width:12px;height:12px;border-radius:3px;flex:none}
+.key .normal{background:var(--st-normal)}.key .vigil{background:var(--st-vigil-fill)}.key .danger{background:var(--st-danger)}
+.key .off{background:repeating-linear-gradient(45deg,#c9d0d4 0 3px,#eceff1 3px 6px)}.key .cyber{background:var(--st-cyber)}
+
+/* Barre empilée du temps passé par niveau */
+.levelbar{display:flex;height:18px;border-radius:5px;overflow:hidden;background:var(--st-off-soft);min-width:120px}
+.levelbar i{display:block;height:100%}
+.levelbar .danger{background:var(--st-danger)}.levelbar .vigil{background:var(--st-vigil-fill)}.levelbar .normal{background:var(--st-normal)}
+.levelbar .off{background:repeating-linear-gradient(45deg,#c9d0d4 0 4px,#eceff1 4px 8px)}
+
+/* Grille de chaleur (nombre de dépassements) */
+.heat td.c{text-align:center;font-weight:700;min-width:48px;border-left:2px solid #fff}
+.heat .h0{background:#f7f9f8;color:var(--muted)}
+.heat .h1{background:#fbd9d9;color:#8e1c1c}.heat .h2{background:#f19b9b;color:#5c0f0f}.heat .h3{background:var(--st-danger);color:#fff}
+.heat .na{color:#a9b3ad;font-weight:400}
+
+/* Chronologie */
+.timeline{list-style:none;margin:0;padding:0 0 0 14px;border-left:2px solid var(--line)}
+.timeline li{position:relative;padding:0 0 14px 14px}
+.timeline li:last-child{padding-bottom:0}
+.timeline li::before{content:"";position:absolute;left:-21px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--st-off);border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.timeline li.open::before{background:var(--st-danger)}
+.timeline li.cyber::before{background:var(--st-cyber)}
+.timeline time{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.timeline .what{margin:3px 0 0}
+
+/* ------------------------------------------------------------------ page de connexion */
+.login{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:var(--card)}
+.login-side{background:linear-gradient(160deg,var(--ocp-deep),var(--ocp-dark));color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between;gap:24px;border-right:6px solid var(--ocp-lime)}
+.login-side h1{font-size:30px;margin:0 0 8px}
+/* Logo sous le titre, au centre du bandeau : fichier 768x978, net jusqu'à ~3x la hauteur affichée */
+.login-logo{align-self:center;background:#fff;border-radius:20px;padding:clamp(16px,2.6vh,26px);box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.login-logo img{display:block;height:clamp(200px,29vh,260px);width:auto}
+.login-side p{opacity:.88;max-width:440px;margin:0}
+.login-side ul{padding-left:18px;margin:0;opacity:.88;font-size:13px}
+.login-main{display:grid;place-items:center;padding:24px}
+.login-form{width:100%;max-width:360px}
+.login-form h2{font-size:20px;margin:0 0 4px}
+.login-form .sub{color:var(--muted);margin:0;font-size:13px}
+.login-form label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:16px 0 5px}
+.login-form input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;color:var(--text)}
+.login-form input:focus{border-color:var(--ocp-dark)}
+.login-form button{width:100%;margin-top:22px;padding:12px;border:0;border-radius:8px;background:var(--ocp-dark);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+.login-form button:hover{background:var(--ocp-deep)}
+.login-form button:disabled{opacity:.6;cursor:wait}
+.login-error{margin-top:14px;padding:9px 12px;border:1px solid #efb8b8;border-radius:8px;background:var(--st-danger-soft);color:#8e1c1c;font-size:13px}
+.login-hint{margin-top:18px;color:var(--muted);font-size:12px}
+
+/* ------------------------------------------------------------------ écrans */
+@media (min-width:2200px){body{font-size:16px}.topbar .brand b{font-size:19px}.mainnav a{font-size:16px}.kpi b{font-size:36px}.data{font-size:15px}}
+@media (max-width:1150px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:860px){
+  .topbar-in{gap:10px}
+  .mainnav{order:3;width:100%}
+  .login{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr}
+  .login-side{padding:24px;border-right:0;border-bottom:6px solid var(--ocp-lime);justify-content:flex-start}
+  .login-side ul{display:none}
+  .login-logo{border-radius:14px;padding:12px}
+  .login-logo img{height:120px}
+}
+@media (max-width:560px){.topbar-in,.page{padding-left:16px;padding-right:16px}.page-head{padding-left:16px;padding-right:16px}.topbar .who{margin-left:0}.kpis{grid-template-columns:minmax(0,1fr)}}

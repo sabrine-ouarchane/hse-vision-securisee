@@ -1,0 +1,117 @@
+{
+  "_comment": "Zones dangereuses du site (étape 9). 'plan' : forme de la zone sur le plan schématique de la page /zones (repère 1000 × 620, non à l'échelle, sans coordonnée réelle), position de l'étiquette et du point chaud. Noms génériques, aucune coordonnée réelle. 'normes' : seuils S-HSE-23, modifiables uniquement dans ce fichier. 'mesures' : caractéristiques des capteurs (plage, résolution, bruit normal, vitesse de variation physiquement possible, limite de détection), utilisées par les contrôles de plausibilité et par le simulateur. 'parametres' : réglages modifiables par un administrateur depuis l'interface, dans des bornes sûres fixées dans le code (app/zones/settings.py).",
+  "normes": {
+    "_comment": "Seuils d'exposition S-HSE-23 (espace confiné), appliqués par analogie aux zones ouvertes. 'reference' : valeur de base à partir de laquelle se compte le pourcentage orange (0 pour un gaz toxique, air ambiant pour O2, ambiance de 20 °C pour la température).",
+    "O2_pct": {"libelle": "O2", "unite": "%", "min": 19.5, "max": 23.5, "reference": 20.9},
+    "SO2_ppm": {"libelle": "SO2", "unite": "ppm", "max": 2, "reference": 0},
+    "CO_ppm": {"libelle": "CO", "unite": "ppm", "max": 25, "reference": 0},
+    "NO2_ppm": {"libelle": "NO2", "unite": "ppm", "max": 0, "reference": 0},
+    "NO_ppm": {"libelle": "NO", "unite": "ppm", "max": 0, "reference": 0},
+    "H2S_ppm": {"libelle": "H2S", "unite": "ppm", "max": 10, "reference": 0},
+    "NH3_ppm": {"libelle": "NH3", "unite": "ppm", "max": 25, "reference": 0},
+    "LIE_pct": {"libelle": "Explosivité", "unite": "% LIE", "max": 5, "reference": 0},
+    "Temp_C": {"libelle": "Température", "unite": "°C", "max": 35, "reference": 20}
+  },
+  "mesures": {
+    "_comment": "plage : étendue de mesure du capteur ; resolution : pas d'affichage ; bruit : écart-type normal en air stable ; vitesse_max_par_s : variation au-delà de laquelle une mesure est physiquement impossible (une vraie fuite reste en dessous) ; limite_detection : sous cette valeur, la mesure vaut 0 (null : sans objet).",
+    "O2_pct": {"plage": [0, 30], "resolution": 0.1, "bruit": 0.05, "vitesse_max_par_s": 1.0, "limite_detection": null, "normale": 20.9},
+    "SO2_ppm": {"plage": [0, 100], "resolution": 0.1, "bruit": 0.1, "vitesse_max_par_s": 5, "limite_detection": 0.1, "normale": 0.3},
+    "CO_ppm": {"plage": [0, 500], "resolution": 0.5, "bruit": 0.6, "vitesse_max_par_s": 50, "limite_detection": 1, "normale": 4},
+    "NO2_ppm": {"plage": [0, 20], "resolution": 0.1, "bruit": 0.03, "vitesse_max_par_s": 5, "limite_detection": 0.2, "normale": 0},
+    "NO_ppm": {"plage": [0, 100], "resolution": 0.1, "bruit": 0.03, "vitesse_max_par_s": 10, "limite_detection": 0.5, "normale": 0},
+    "H2S_ppm": {"plage": [0, 100], "resolution": 0.1, "bruit": 0.1, "vitesse_max_par_s": 10, "limite_detection": 0.5, "normale": 0},
+    "NH3_ppm": {"plage": [0, 100], "resolution": 0.5, "bruit": 0.15, "vitesse_max_par_s": 20, "limite_detection": 1, "normale": 0},
+    "LIE_pct": {"plage": [0, 100], "resolution": 0.1, "bruit": 0.1, "vitesse_max_par_s": 10, "limite_detection": null, "normale": 0.4},
+    "Temp_C": {"plage": [-20, 80], "resolution": 0.1, "bruit": 0.15, "vitesse_max_par_s": 2, "limite_detection": null, "normale": 26}
+  },
+  "parametres": {
+    "pourcentage_orange": 70,
+    "fenetre_s": 60,
+    "horizon_derive_s": 600,
+    "facteur_variabilite": 4,
+    "hysteresis_s": 30,
+    "delai_absence_s": 3,
+    "duree_figee_s": 30,
+    "quarantaine_s": 60,
+    "confirmation_zero_s": 3,
+    "presence_maintien_s": 5
+  },
+  "simulation": {
+    "graine": 0,
+    "periode_s": 1,
+    "duree_derive_s": 180,
+    "duree_fuite_s": 5,
+    "duree_retour_s": 60
+  },
+  "zones": [
+    {
+      "id": "sechage",
+      "nom": "Unité de séchage (fours)",
+      "methode": "gaz",
+      "plan": {"points": [[640, 215], [830, 215], [830, 325], [640, 325]], "etiquette": [735, 248], "largeur": 180, "point_chaud": [820, 225]},
+      "capteurs": [
+        {"id": "sechage-so2", "mesure": "SO2_ppm"},
+        {"id": "sechage-co", "mesure": "CO_ppm", "normale": 6},
+        {"id": "sechage-no2", "mesure": "NO2_ppm"},
+        {"id": "sechage-o2", "mesure": "O2_pct"},
+        {"id": "sechage-temp", "mesure": "Temp_C", "normale": 28}
+      ],
+      "capteur_principal": "sechage-so2"
+    },
+    {
+      "id": "cuves",
+      "nom": "Cuves de combustible",
+      "methode": "gaz",
+      "plan": {"points": [[800, 350], [940, 350], [940, 455], [800, 455]], "etiquette": [872, 478], "largeur": 150, "point_chaud": [930, 360]},
+      "capteurs": [
+        {"id": "cuves-lie", "mesure": "LIE_pct"},
+        {"id": "cuves-temp", "mesure": "Temp_C", "normale": 25}
+      ],
+      "capteur_principal": "cuves-lie"
+    },
+    {
+      "id": "hangars",
+      "nom": "Hangars de stockage sec",
+      "methode": "gaz",
+      "plan": {"points": [[600, 20], [940, 20], [940, 140], [600, 140]], "etiquette": [770, 62], "largeur": 300, "point_chaud": [930, 30]},
+      "capteurs": [
+        {"id": "hangars-o2", "mesure": "O2_pct"},
+        {"id": "hangars-co", "mesure": "CO_ppm", "normale": 2}
+      ],
+      "capteur_principal": "hangars-co"
+    },
+    {
+      "id": "convoyeurs",
+      "nom": "Convoyeurs et tours de transfert",
+      "methode": "machine",
+      "plan": {"points": [[540, 196], [620, 196], [620, 240], [600, 240], [600, 600], [560, 600], [560, 240], [540, 240]], "etiquette": [690, 545], "largeur": 170, "point_chaud": [610, 206]},
+      "machines": [{"id": "convoyeur_principal", "type": "convoyeur"}]
+    },
+    {
+      "id": "parcs",
+      "nom": "Parcs de stockage humide",
+      "methode": "machine",
+      "plan": {"points": [[20, 215], [530, 215], [530, 600], [20, 600]], "etiquette": [275, 246], "largeur": 460, "point_chaud": [520, 225]},
+      "machines": [
+        {"id": "gerbeur_1", "type": "gerbeur"},
+        {"id": "roue_pelle_1", "type": "roue-pelle"}
+      ]
+    },
+    {
+      "id": "ferroviaire",
+      "nom": "Chargement ferroviaire",
+      "methode": "machine",
+      "plan": {"points": [[90, 156], [950, 156], [950, 192], [90, 192]], "etiquette": [330, 177], "largeur": 420, "point_chaud": [940, 164], "une_ligne": true},
+      "machines": [
+        {"id": "train_chargement", "type": "train"},
+        {"id": "chargeuse_1", "type": "chargeuse"}
+      ]
+    },
+    {
+      "id": "poste_elec",
+      "nom": "Poste électrique",
+      "methode": "hors_perimetre",
+      "plan": {"points": [[650, 345], [770, 345], [770, 430], [650, 430]], "etiquette": [710, 380], "largeur": 115, "point_chaud": [760, 352]}
+    }
+  ]
+}

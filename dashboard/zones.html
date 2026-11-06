@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zones dangereuses · Surveillance HSE</title>
+  <link rel="stylesheet" href="/assets/hse.css">
+  <style>
+    /* Page /zones : uniquement ce qui lui est propre ; couleurs et composants communs dans /assets/hse.css */
+    body{font-size:13px}
+    .notice{margin:0 0 var(--gap);padding:10px 12px;border-radius:var(--radius);border:1px solid #efb8b8;background:var(--st-danger-soft);color:#8e1c1c}
+    .muted{color:var(--muted)}
+    .hint{color:var(--muted);font-size:12px;margin:8px 0 0}
+
+    /* Bandeau d'état global */
+    .banner{display:flex;align-items:center;gap:14px 20px;flex-wrap:wrap;padding:12px 16px}
+    .banner .state b{font-size:16px;display:block}
+    .banner .state small{display:block;color:var(--muted);font-size:12px}
+    .banner .counts{display:flex;gap:6px;flex-wrap:wrap}
+    .banner .aside{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    .split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:var(--gap);align-items:start}
+
+    /* Plan */
+    .plan-wrap{position:relative}
+    svg.plan{display:block;width:100%;height:auto;background:#f3eee2;border-radius:0 0 var(--radius) var(--radius)}
+    .zone-shape{stroke:#1b2a22;stroke-width:1.5;cursor:pointer;transition:fill .4s}
+    .zone.VERT .zone-shape{fill:var(--st-normal);fill-opacity:.4}
+    .zone.ORANGE .zone-shape{fill:var(--st-vigil-fill);fill-opacity:.6}
+    .zone.ROUGE .zone-shape{fill:var(--st-danger);fill-opacity:.6;animation:pulse 1.4s ease-in-out infinite}
+    .zone.GRIS .zone-shape{fill:url(#hatch);fill-opacity:1}
+    .zone.selected .zone-shape{stroke-width:4;stroke:#0b1f12}
+    .zone:hover .zone-shape{stroke-width:3}
+    @keyframes pulse{0%,100%{fill-opacity:.6}50%{fill-opacity:.3}}
+    @media (prefers-reduced-motion:reduce){.zone.ROUGE .zone-shape{animation:none}}
+    .label-plate{fill:#fff;fill-opacity:.92;stroke:#1b2a2233;rx:6}
+    .label-name{font-weight:700;font-size:13px;fill:#1b2a22}
+    .label-level{font-weight:800;font-size:12px}
+    .label-level.VERT{fill:var(--st-normal)}.label-level.ORANGE{fill:var(--st-vigil)}.label-level.ROUGE{fill:var(--st-danger)}.label-level.GRIS{fill:var(--st-off)}
+    .label-reason{font-size:11px;fill:#33463a}
+    .zone-label,.deco{pointer-events:none}
+    .hot circle{fill:var(--st-danger);fill-opacity:.85;stroke:#fff;stroke-width:2}
+    .hot text{fill:#fff;font-weight:800;font-size:12px;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+    .key .hot{border-radius:50%;background:var(--st-danger)}
+    .tooltip{position:absolute;max-width:340px;padding:10px 12px;border-radius:10px;background:#13251a;color:#fff;font-size:12px;box-shadow:0 8px 24px #0004;pointer-events:none;z-index:5}
+    .tooltip b{font-size:13px}
+    .tooltip .badge{margin:4px 0}
+    .note{color:var(--muted);font-size:12px;margin:10px 16px 12px}
+
+    /* Liste des zones et détail */
+    .zone-list{list-style:none;margin:0;padding:0}
+    .zone-list li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer;border-radius:6px}
+    .zone-list li:last-child{border-bottom:0}
+    .zone-list li:hover,.zone-list li.selected{background:var(--bg)}
+    .zone-list .badge{grid-row:span 2;align-self:start;min-width:104px;justify-content:center}
+    .zone-list .name{font-weight:700}
+    .zone-list .why{color:#33463a;font-size:12px}
+    .bad{color:var(--st-danger);font-weight:700}
+    .unreliable{color:var(--st-cyber);font-weight:700}
+
+    /* Courbes des capteurs : une carte par capteur, axe du temps commun */
+    .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    .cards .group{grid-column:1/-1;margin:8px 0 -2px;font-weight:700;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:3px}
+    .cards .group:first-child{margin-top:0}
+    .sensor-card{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);padding:8px 10px 6px;cursor:pointer;min-width:0}
+    .sensor-card:hover,.sensor-card:focus-visible{border-color:var(--ocp-dark);outline:none}
+    .sensor-card.open{grid-column:1/-1;cursor:zoom-out;box-shadow:0 4px 16px #1b2a221a}
+    .sensor-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+    .sensor-head .names{flex:1;min-width:0;line-height:1.2}
+    .sensor-head .names b{font-size:13px}
+    .sensor-head .names small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sensor-value{font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+    .sensor-value.unreliable{font-size:12px}
+    .pastille{width:12px;height:12px;border-radius:50%;flex:none;background:var(--st-off);border:2px solid #fff;box-shadow:0 0 0 1px #0002}
+    .pastille.VERT{background:var(--st-normal)}.pastille.ORANGE{background:var(--st-vigil-fill)}.pastille.ROUGE{background:var(--st-danger)}
+    .pastille.GRIS{background:var(--st-off)}.pastille.CYBER{background:var(--st-cyber)}
+    svg.chart{display:block;width:100%;height:auto;background:#f7f9f8;border-radius:6px}
+    .chart .axis{stroke:#9fb0a5;stroke-width:1}
+    .chart .grid-line{stroke:var(--line);stroke-width:1}
+    .chart text{font-size:10px;fill:var(--muted)}
+    .sensor-card.open .chart text{font-size:11px}
+    .chart .series{fill:none;stroke:#1b2a22;stroke-width:1.8}
+    .chart .series.thin{stroke-width:1.4}
+    .chart .range{fill:#1b2a2222;stroke:none}
+    .chart .limit-red{stroke:var(--st-danger);stroke-width:2;stroke-dasharray:6 4}
+    .chart .band-orange{fill:var(--st-vigil-fill);fill-opacity:.18}
+    .chart .limit-orange{stroke:var(--st-vigil);stroke-width:1.5;stroke-dasharray:3 3}
+    .sensor-legend{display:none;margin-top:6px}
+    .sensor-card.open .sensor-legend{display:block}
+    .key .line{height:3px;border-radius:0;background:#1b2a22}
+    .key .range{background:#1b2a2222}
+    .key .dash{height:0;border-radius:0;border-top:2px dashed var(--st-danger);width:16px}
+
+    /* Statistiques */
+    .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+    .stats .card{margin-bottom:0}
+    .scroll{overflow-x:auto}
+    .others{color:var(--muted);font-size:12px;margin:10px 8px 0}
+
+    /* Simulation et réglages */
+    .controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap);margin-top:var(--gap)}
+    .controls .card{margin-bottom:0}
+    select,input{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text);font:inherit;max-width:100%}
+    .sim-row{display:grid;grid-template-columns:1fr;gap:5px;padding:9px 0;border-bottom:1px solid var(--line)}
+    .sim-row .ctrls{display:flex;gap:6px;flex-wrap:wrap}
+    .sim-row .ctrls select{flex:1 1 140px}
+    .feedback{margin-top:8px;font-size:12px}
+    .feedback.ok{color:var(--st-normal)}.feedback.err{color:var(--st-danger)}
+
+    @media (max-width:1150px){.split{grid-template-columns:minmax(0,1fr)}.stats,.controls{grid-template-columns:minmax(0,1fr)}}
+    @media (max-width:900px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:560px){.banner .aside{margin-left:0}.cards{grid-template-columns:minmax(0,1fr)}}
+  </style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="/live"><img src="/assets/logo.svg" alt="Logo"><span><b>Surveillance HSE</b><small>Site industriel · Preuve de concept</small></span></a>
+    <nav class="mainnav" aria-label="Navigation principale">
+      <a href="/live">Surveillance vidéo</a>
+      <a href="/zones" aria-current="page">Zones</a>
+      <a id="audit-link" hidden href="/audit">Audit</a>
+    </nav>
+    <div class="who"><span id="user-name">—</span><span id="user-role" class="role"></span><button id="logout" type="button">Déconnexion</button></div>
+  </div>
+</header>
+<div class="page-head"><div class="title-card"><h1>Zones dangereuses</h1><p>Méthode gaz (S-HSE-23) et méthode machine (S-HSE-22) · Preuve de concept · données capteurs simulées</p></div></div>
+<main class="page">
+
+  <section class="card banner" aria-live="polite">
+    <span id="mon-badge" class="badge off lg">Surveillance arrêtée</span>
+    <div class="state"><b id="mon-label">Surveillance arrêtée</b><small id="mon-detail">—</small></div>
+    <div class="counts" id="counts"></div>
+    <div class="aside">
+      <span class="chip" id="open-incidents">0 incident ouvert</span>
+      <span class="chip" title="Aucun capteur réel : SensorProvider simulé (remplaçable par une source OSIsoft PI)">Données simulées</span>
+    </div>
+  </section>
+
+  <div id="error" class="notice" hidden></div>
+
+  <div class="split">
+    <section class="card">
+      <div class="card-head">
+        <div><h2>Plan schématique du site</h2><p>Survol : raison et mesures · clic : détail de la zone · le danger clignote</p></div>
+        <div class="aside key">
+          <span><i class="normal"></i>Normal (vert)</span>
+          <span><i class="vigil"></i>Vigilance (orange)</span>
+          <span><i class="danger"></i>Danger (rouge)</span>
+          <span><i class="off"></i>Hors surveillance (gris)</span>
+          <span><i class="hot"></i>Point chaud : incidents sur la période</span>
+        </div>
+      </div>
+      <div class="plan-wrap" id="plan-wrap">
+        <svg class="plan" id="plan" viewBox="0 0 1000 620" role="img" aria-label="Plan schématique des zones du site">
+          <defs>
+            <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="8" height="8" fill="#eef0ee"/><line x1="0" y1="0" x2="0" y2="8" stroke="#bfc6c1" stroke-width="4"/>
+            </pattern>
+            <pattern id="stripes" width="14" height="14" patternUnits="userSpaceOnUse">
+              <rect width="14" height="14" fill="#d9dde3"/><rect width="7" height="14" fill="#c3cad6"/>
+            </pattern>
+          </defs>
+          <g class="deco">
+            <rect x="0" y="0" width="560" height="140" fill="#dfe8d2"/>
+            <rect x="0" y="198" width="1000" height="10" fill="#e4dccb"/>
+            <rect x="0" y="146" width="1000" height="6" fill="#e4dccb"/>
+            <rect x="620" y="26" width="310" height="44" fill="url(#stripes)"/>
+            <rect x="620" y="82" width="310" height="44" fill="url(#stripes)"/>
+            <line x1="90" y1="168" x2="950" y2="168" stroke="#8d8577" stroke-width="2"/>
+            <line x1="90" y1="180" x2="950" y2="180" stroke="#8d8577" stroke-width="2"/>
+            <g fill="#e9dfc6" stroke="#cbbd99">
+              <rect x="40" y="290" width="470" height="44" rx="22"/>
+              <rect x="40" y="390" width="470" height="44" rx="22"/>
+              <rect x="40" y="490" width="470" height="44" rx="22"/>
+            </g>
+            <g stroke="#3c4a8a" stroke-width="5" stroke-linecap="round">
+              <line x1="180" y1="352" x2="260" y2="372"/><line x1="380" y1="452" x2="430" y2="472"/><line x1="120" y1="552" x2="200" y2="568"/>
+            </g>
+            <g stroke="#6f7a70" stroke-width="3">
+              <line x1="40" y1="362" x2="560" y2="362"/><line x1="40" y1="462" x2="560" y2="462"/><line x1="40" y1="562" x2="560" y2="562"/>
+            </g>
+            <rect x="655" y="230" width="160" height="80" fill="#cfd3d6" stroke="#9aa1a6"/>
+            <g fill="#bfc5c9"><rect x="668" y="238" width="22" height="34"/><rect x="700" y="238" width="22" height="34"/><rect x="732" y="238" width="22" height="34"/><rect x="764" y="238" width="22" height="34"/></g>
+            <g fill="#d7dcdf" stroke="#a4abb0"><circle cx="840" cy="405" r="22"/><circle cx="895" cy="405" r="22"/></g>
+            <g stroke="#7f9a83" stroke-width="1"><path d="M660 355h100M660 370h100M660 385h100M660 400h100M660 415h100M675 350v75M700 350v75M725 350v75M750 350v75"/></g>
+            <text x="990" y="612" text-anchor="end" font-size="10" fill="#8d8577">Plan schématique non à l'échelle · aucune coordonnée réelle</text>
+          </g>
+          <g id="zones-layer"></g>
+          <g id="hot-layer"></g>
+          <g id="labels-layer"></g>
+        </svg>
+        <div class="tooltip" id="tooltip" hidden></div>
+      </div>
+      <p class="note">Les zones machine utilisent la présence vue par /live : seule la caméra en cours d'analyse renseigne sa zone.</p>
+    </section>
+
+    <aside>
+      <section class="card" id="detail-panel" hidden>
+        <div class="card-head"><div><h2 id="detail-title">Détail</h2><p>Zone sélectionnée</p></div><div class="aside"><button class="button small" id="detail-close" type="button">Fermer</button></div></div>
+        <div class="card-body" id="detail-body"></div>
+      </section>
+      <section class="card">
+        <div class="card-head"><div><h2>État des zones</h2><p id="updated">—</p></div></div>
+        <div class="card-body"><ul class="zone-list" id="zone-list"></ul></div>
+      </section>
+    </aside>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <div><h2>Courbes des capteurs</h2><p id="axis-note">Axe du temps commun à toutes les cartes</p></div>
+      <div class="aside key"><span><i class="dash"></i>seuil S-HSE-23</span><span><i class="vigil"></i>zone orange</span><span><i class="cyber"></i>capteur non fiable</span></div>
+    </div>
+    <div class="card-body">
+      <div class="cards" id="cards"></div>
+      <p class="hint">Axe du temps commun, à partir de la première mesure de la période ; échelle verticale propre à chaque capteur. Cliquer une carte l'agrandit, cliquer à nouveau la referme. Mise à jour chaque seconde.</p>
+    </div>
+  </section>
+
+  <div class="section-title">
+    <h2>Statistiques</h2><span class="muted" id="stats-period">dernière heure</span>
+    <label class="aside muted">Période :
+      <select id="period">
+        <option value="heure">Dernière heure</option>
+        <option value="jour">Dernières 24 h</option>
+        <option value="semaine">7 derniers jours</option>
+      </select>
+    </label>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="stats">
+    <section class="card">
+      <div class="card-head"><div><h2>Combien de temps en danger ?</h2><p>Temps passé à chaque niveau, par zone</p></div></div>
+      <div class="card-body scroll">
+        <div class="key" style="margin-bottom:10px"><span><i class="danger"></i>Danger</span><span><i class="vigil"></i>Vigilance</span><span><i class="normal"></i>Normal</span><span><i class="off"></i>Hors surveillance</span></div>
+        <table class="data"><thead><tr><th>Zone</th><th style="width:45%">Répartition</th><th class="num">En danger</th></tr></thead><tbody id="time-rows"></tbody></table>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><div><h2>Où agir en priorité ?</h2><p>Classement par temps en danger, puis par nombre d'incidents</p></div></div>
+      <div class="card-body scroll">
+        <table class="data"><thead><tr><th class="num">#</th><th>Zone</th><th class="num">En danger</th><th class="num">Incidents</th><th>Nature</th></tr></thead><tbody id="rank-rows"></tbody></table>
+        <p class="others" id="rank-others"></p>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><div><h2>Quels gaz dépassent ?</h2><p>Dépassements du seuil S-HSE-23 sur la période · « – » : gaz non mesuré dans la zone</p></div></div>
+      <div class="card-body scroll">
+        <table class="data heat"><thead id="exceed-head"></thead><tbody id="exceed-rows"></tbody></table>
+        <div class="key" style="margin-top:10px"><span><i style="background:#f7f9f8;border:1px solid var(--line)"></i>0</span><span><i style="background:#fbd9d9"></i>1</span><span><i style="background:#f19b9b"></i>2</span><span><i class="danger"></i>3 et plus</span></div>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><div><h2>Que s'est-il passé ?</h2><p>Derniers incidents de zone, du plus récent au plus ancien</p></div></div>
+      <div class="card-body"><ul class="timeline" id="incident-rows"></ul></div>
+    </section>
+  </div>
+
+  <div class="controls">
+    <section class="card needs-hse" hidden>
+      <div class="card-head"><div><h2>Simulation</h2><p>Responsable HSE · chaque action est contrôlée par le serveur et consignée dans le journal d'audit</p></div>
+        <div class="aside"><button class="button primary" id="sim-toggle" type="button">Démarrer la surveillance</button></div></div>
+      <div class="card-body">
+        <div id="sim-rows"></div>
+        <p class="hint">Le scénario s'applique au capteur choisi (par défaut, le capteur principal de la zone).</p>
+        <div class="feedback" id="sim-feedback"></div>
+      </div>
+    </section>
+    <section class="card needs-admin" hidden>
+      <div class="card-head"><div><h2>Réglages</h2><p>Administrateur · bornes sûres imposées par le serveur</p></div></div>
+      <div class="card-body">
+        <table class="data"><tbody id="param-rows"></tbody></table>
+        <button class="button primary" id="param-save" type="button" style="margin-top:10px">Enregistrer</button>
+        <p class="hint">Les seuils S-HSE-23, les capteurs et les zones ne sont modifiables que dans config/zones.json.</p>
+        <div class="feedback" id="param-feedback"></div>
+      </div>
+    </section>
+  </div>
+
+</main>
+
+<script>
+  const $ = (selector) => document.querySelector(selector);
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  // Niveaux du serveur (VERT / ORANGE / ROUGE / GRIS) affichés avec les états communs de hse.css
+  const LEVEL_LABEL = { VERT: "Normal", ORANGE: "Vigilance", ROUGE: "Danger", GRIS: "Hors surveillance" };
+  const LEVEL_STATE = { VERT: "normal", ORANGE: "vigil", ROUGE: "danger", GRIS: "off" };
+  const LEVEL_ORDER = ["ROUGE", "ORANGE", "VERT", "GRIS"];
+  const ROLE_RANK = { operateur: 0, responsable_hse: 1, admin: 2 };
+  const KIND_LABEL = { gaz: "gaz", machine: "machine", capteur: "cyber (capteur)", epi: "EPI", proximite: "proximité", camera: "cyber (caméra)" };
+  const CATEGORY = { gaz: "Gaz", machine: "Machine", capteur: "Cyber", epi: "EPI", proximite: "Proximité", camera: "Cyber" };
+  const levelBadge = (level, extra = "") => `<span class="badge ${LEVEL_STATE[level] || "off"}${extra}">${LEVEL_LABEL[level] || escapeHtml(level)}</span>`;
+  const categoryChip = (kind, count) => `<span class="chip ${kind === "capteur" || kind === "camera" ? "cyber" : "cat"}">${CATEGORY[kind] || escapeHtml(kind)}${count ? ` ${count}` : ""}</span>`;
+  let me = { role: "operateur" };
+  let status = null, stats = null, selected = null, built = false;
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function showError(message) { const box = $("#error"); box.textContent = message || ""; box.hidden = !message; }
+  async function api(path, body) {
+    const options = body === undefined ? { cache: "no-store" } : {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+    };
+    const response = await fetch(path, options);
+    if (response.status === 401) { location.replace("/login?next=/zones"); throw new Error("Session expirée."); }
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Erreur ${response.status}`);
+    return data;
+  }
+  const time = (iso) => iso ? new Date(iso).toLocaleTimeString("fr-FR") : "—";
+  const dateTime = (iso) => iso ? new Date(iso).toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "—";
+  const num = (v) => v === null || v === undefined ? "—" : String(Math.round(v * 100) / 100).replace(".", ",");
+  // Durées toujours au même format : « 5 s », « 49 min 25 s », « 2 h 05 min »
+  function duration(seconds) {
+    seconds = Math.round(seconds || 0);
+    if (seconds < 60) return `${seconds} s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} min ${String(seconds % 60).padStart(2, "0")} s`;
+    return `${Math.floor(seconds / 3600)} h ${String(Math.floor(seconds % 3600 / 60)).padStart(2, "0")} min`;
+  }
+  function svg(tag, attrs = {}, parent = null) {
+    const node = document.createElementNS(SVG_NS, tag);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+  function wrap(text, width, maxLines) {
+    const words = String(text || "").split(/\s+/);
+    const lines = [];
+    let line = "";
+    for (const word of words) {
+      if ((line + " " + word).trim().length > width && line) { lines.push(line); line = word; }
+      else line = (line + " " + word).trim();
+    }
+    if (line) lines.push(line);
+    if (lines.length > maxLines) { lines.length = maxLines; lines[maxLines - 1] = lines[maxLines - 1].replace(/.{0,2}$/, "…"); }
+    return lines;
+  }
+
+  // ---------------------------------------------------------------- utilisateur
+  async function loadMe() {
+    me = await api("/api/me");
+    $("#user-name").textContent = me.username;
+    $("#user-role").textContent = me.role_label;
+    $("#audit-link").hidden = me.role !== "admin";
+    document.querySelectorAll(".needs-hse").forEach((el) => { el.hidden = ROLE_RANK[me.role] < 1; });
+    document.querySelectorAll(".needs-admin").forEach((el) => { el.hidden = me.role !== "admin"; });
+  }
+  $("#logout").addEventListener("click", async () => {
+    try { await api("/api/logout", {}); } finally { location.replace("/login"); }
+  });
+
+  // ---------------------------------------------------------------- plan
+  function buildPlan() {
+    const zonesLayer = $("#zones-layer"), labelsLayer = $("#labels-layer");
+    for (const zone of status.zones) {
+      if (!zone.plan) continue;
+      const group = svg("g", { class: "zone", "data-zone": zone.zone, tabindex: "0" }, zonesLayer);
+      svg("polygon", { class: "zone-shape", points: zone.plan.points.map((p) => p.join(",")).join(" ") }, group);
+      group.addEventListener("mouseenter", (event) => showTooltip(zone.zone, event));
+      group.addEventListener("mousemove", (event) => moveTooltip(event));
+      group.addEventListener("mouseleave", () => { $("#tooltip").hidden = true; });
+      group.addEventListener("click", () => select(zone.zone));
+      group.addEventListener("keydown", (event) => { if (event.key === "Enter") select(zone.zone); });
+      const label = svg("g", { class: "zone-label", "data-label": zone.zone }, labelsLayer);
+      svg("rect", { class: "label-plate" }, label);
+      svg("text", { x: zone.plan.etiquette[0], y: zone.plan.etiquette[1], "text-anchor": "middle" }, label);
+    }
+    built = true;
+  }
+
+  function renderPlan() {
+    for (const zone of status.zones) {
+      const group = document.querySelector(`[data-zone="${zone.zone}"]`);
+      if (!group) continue;
+      group.setAttribute("class", `zone ${zone.niveau}${selected === zone.zone ? " selected" : ""}`);
+      const label = document.querySelector(`[data-label="${zone.zone}"]`);
+      const text = label.querySelector("text");
+      const [x] = zone.plan.etiquette;
+      const chars = Math.max(14, Math.floor((zone.plan.largeur || 180) / 6.1));
+      text.textContent = "";
+      const oneLine = zone.plan.une_ligne;
+      const name = svg("tspan", { x, class: "label-name" }, text);
+      name.textContent = oneLine ? `${zone.nom} · ` : zone.nom;
+      const level = svg("tspan", oneLine ? { class: `label-level ${zone.niveau}` } : { x, dy: "16", class: `label-level ${zone.niveau}` }, text);
+      level.textContent = LEVEL_LABEL[zone.niveau].toUpperCase();
+      if (!oneLine) {
+        for (const line of wrap(zone.raison, chars, 3)) {
+          svg("tspan", { x, dy: "14", class: "label-reason" }, text).textContent = line;
+        }
+      } else {
+        svg("tspan", { class: "label-reason", dx: "6" }, text).textContent = wrap(zone.raison, chars, 1)[0] || "";
+      }
+      const box = text.getBBox();
+      const plate = label.querySelector("rect");
+      plate.setAttribute("x", box.x - 6); plate.setAttribute("y", box.y - 3);
+      plate.setAttribute("width", box.width + 12); plate.setAttribute("height", box.height + 6);
+    }
+  }
+
+  function renderHotspots() {
+    const layer = $("#hot-layer");
+    layer.textContent = "";
+    if (!stats || !status) return;
+    for (const zone of status.zones) {
+      const entry = stats.zones[zone.zone];
+      if (!zone.plan || !entry || !entry.total) continue;
+      const [cx, cy] = zone.plan.point_chaud || zone.plan.etiquette;
+      const group = svg("g", { class: "hot" }, layer);
+      const title = svg("title", {}, group);
+      title.textContent = `${entry.total} incident(s) sur la période : ` +
+        Object.entries(entry.incidents).filter(([, n]) => n).map(([k, n]) => `${KIND_LABEL[k]} ${n}`).join(", ");
+      svg("circle", { cx, cy, r: Math.min(30, 9 + 5 * Math.sqrt(entry.total)) }, group);
+      svg("text", { x: cx, y: cy }, group).textContent = entry.total;
+    }
+  }
+
+  function zoneSummary(zone) {
+    const rows = [];
+    for (const sensor of zone.capteurs || []) {
+      const value = sensor.fiable ? `${num(sensor.valeur)} ${sensor.unite}` : "non fiable";
+      rows.push(`${escapeHtml(sensor.libelle)} : ${escapeHtml(value)}`);
+    }
+    for (const machine of zone.machines || []) rows.push(`${escapeHtml(machine.machine)} : ${escapeHtml(machine.etat)}`);
+    if (zone.presence) rows.push(`Présence : ${escapeHtml(zone.presence.etat)}${zone.presence.source ? ` (${escapeHtml(zone.presence.source)})` : ""}`);
+    return rows.join("<br>");
+  }
+  function showTooltip(zoneId, event) {
+    const zone = status.zones.find((z) => z.zone === zoneId);
+    if (!zone) return;
+    const tip = $("#tooltip");
+    tip.innerHTML = `<b>${escapeHtml(zone.nom)}</b><br>${levelBadge(zone.niveau, " solid")}<br>` +
+      `${escapeHtml(zone.raison)}${zone.scenario ? `<br><span style="opacity:.75">Scénario : ${escapeHtml(zone.scenario.scenario)}</span>` : ""}` +
+      `<div style="margin-top:6px;opacity:.9">${zoneSummary(zone)}</div>`;
+    tip.hidden = false;
+    moveTooltip(event);
+  }
+  function moveTooltip(event) {
+    const tip = $("#tooltip"), wrapBox = $("#plan-wrap").getBoundingClientRect();
+    let left = event.clientX - wrapBox.left + 14, top = event.clientY - wrapBox.top + 14;
+    if (left + tip.offsetWidth > wrapBox.width) left = event.clientX - wrapBox.left - tip.offsetWidth - 14;
+    if (top + tip.offsetHeight > wrapBox.height) top = event.clientY - wrapBox.top - tip.offsetHeight - 14;
+    tip.style.left = `${Math.max(0, left)}px`; tip.style.top = `${Math.max(0, top)}px`;
+  }
+
+  // ---------------------------------------------------------------- bandeau, liste, détail
+  function renderBanner() {
+    const active = status.actif;
+    const badge = $("#mon-badge");
+    badge.className = `badge lg ${active ? "solid normal" : "off"}`;
+    badge.textContent = active ? "Surveillance active" : "Surveillance arrêtée";
+    if (active) {
+      $("#mon-label").textContent = `Surveillance active depuis ${time(status.demarrage?.a || status.source.demarre_a)}`;
+      $("#mon-detail").textContent = `démarrée par ${status.demarrage?.par || "—"} · source : ${status.source.source} (graine ${status.source.graine})`;
+    } else {
+      $("#mon-label").textContent = `Surveillance arrêtée — par ${status.arret?.par || "—"} à ${time(status.arret?.a)}`;
+      $("#mon-detail").textContent = status.arret?.motif ? `motif : ${status.arret.motif} · zones en gris, non évaluées` : "";
+    }
+    const counts = Object.fromEntries(LEVEL_ORDER.map((l) => [l, 0]));
+    status.zones.forEach((z) => { counts[z.niveau] = (counts[z.niveau] || 0) + 1; });
+    $("#counts").innerHTML = LEVEL_ORDER.map((l) =>
+      `<span class="badge ${LEVEL_STATE[l]}"><b class="num">${counts[l]}</b>&nbsp;${LEVEL_LABEL[l].toLowerCase()}</span>`).join("");
+    const open = status.incidents_ouverts.length;
+    const tag = $("#open-incidents");
+    tag.textContent = `${open} incident${open > 1 ? "s" : ""} ouvert${open > 1 ? "s" : ""}`;
+    tag.className = open ? "badge solid danger" : "chip";
+    tag.title = status.incidents_ouverts.map((i) => `${i.zone_nom} : ${i.raison}`).join("\n");
+    $("#updated").textContent = `mis à jour à ${time(status.horodatage)}`;
+  }
+
+  function renderList() {
+    const order = { ROUGE: 0, ORANGE: 1, VERT: 2, GRIS: 3 };
+    const zones = [...status.zones].sort((a, b) => order[a.niveau] - order[b.niveau]);
+    $("#zone-list").innerHTML = zones.map((z) => `
+      <li data-item="${escapeHtml(z.zone)}" class="${selected === z.zone ? "selected" : ""}">
+        ${levelBadge(z.niveau)}
+        <span class="name">${escapeHtml(z.nom)}</span>
+        <span class="why">${escapeHtml(z.raison)}</span>
+      </li>`).join("");
+    document.querySelectorAll("#zone-list li").forEach((li) => li.addEventListener("click", () => select(li.dataset.item)));
+  }
+
+  function select(zoneId) {
+    selected = selected === zoneId ? null : zoneId;
+    renderAll();
+  }
+  $("#detail-close").addEventListener("click", () => { selected = null; renderAll(); });
+
+  function thresholdText(sensor) {
+    if (sensor.seuil_min !== null && sensor.seuil_min !== undefined) return `${num(sensor.seuil_min)} – ${num(sensor.seuil_max)}`;
+    if (sensor.seuil_max === 0) return `0 (LD ${num(sensor.limite_detection)})`;
+    return `< ${num(sensor.seuil_max)}`;
+  }
+  function orangeText(sensor) {
+    const o = sensor.orange || {};
+    if (o.bas !== undefined) return `< ${num(o.bas)} ou > ${num(o.haut)}`;
+    return sensor.seuil_max === 0 ? "détecté" : `≥ ${num(o.haut)}`;
+  }
+  function renderDetail() {
+    const panel = $("#detail-panel");
+    const zone = status.zones.find((z) => z.zone === selected);
+    panel.hidden = !zone;
+    if (!zone) return;
+    $("#detail-title").textContent = zone.nom;
+    let html = `<p style="margin-top:0">${levelBadge(zone.niveau)} ${escapeHtml(zone.raison)}</p>`;
+    if (zone.niveau_brut && zone.niveau_brut !== zone.niveau) {
+      html += `<p class="muted">Situation actuelle : ${LEVEL_LABEL[zone.niveau_brut] || escapeHtml(zone.niveau_brut)} — ${escapeHtml(zone.raison_actuelle)}</p>`;
+    }
+    if ((zone.capteurs || []).length) {
+      html += `<div class="scroll"><table class="data"><thead><tr><th>Mesure</th><th class="num">Valeur</th><th class="num">Orange</th><th class="num">Seuil</th><th>État</th></tr></thead><tbody>` +
+        zone.capteurs.map((s) => `<tr>
+          <td>${escapeHtml(s.libelle)}<br><span class="muted">${escapeHtml(s.capteur)}</span></td>
+          <td class="num ${s.fiable ? "" : "unreliable"}">${s.fiable ? `${num(s.valeur)} ${escapeHtml(s.unite)}` : "non fiable"}</td>
+          <td class="num">${escapeHtml(orangeText(s))}</td><td class="num">${escapeHtml(thresholdText(s))}</td>
+          <td>${s.fiable ? levelBadge(s.niveau) : `<span class="badge cyber">Non fiable</span>`}
+          ${s.raison || s.instabilite ? `<br><span class="muted">${escapeHtml(s.raison_fiabilite || s.raison || s.instabilite)}</span>` : ""}</td></tr>`).join("") +
+        `</tbody></table></div>`;
+    }
+    if ((zone.machines || []).length) {
+      html += `<table class="data" style="margin-top:8px"><thead><tr><th>Machine</th><th>État</th><th>Fiabilité</th></tr></thead><tbody>` +
+        zone.machines.map((m) => `<tr><td>${escapeHtml(m.machine)}<br><span class="muted">${escapeHtml(m.type || "")}</span></td>
+          <td><b>${escapeHtml(m.etat)}</b></td><td class="${m.fiable ? "" : "unreliable"}">${m.fiable ? "fiable" : escapeHtml(m.raison_fiabilite)}</td></tr>`).join("") +
+        `</tbody></table>`;
+      const p = zone.presence || {};
+      html += `<p class="hint">Présence : <b>${escapeHtml(p.etat || "inconnue")}</b> · caméra : ${escapeHtml(p.source || "aucune caméra associée")}` +
+        `${p.proximite ? " · <b class=\"bad\">proximité active</b>" : ""}${p.camera_compromise ? " · <span class=\"badge cyber\">Caméra compromise</span>" : ""}</p>`;
+    }
+    if (zone.scenario) html += `<p class="hint">Scénario simulé : ${escapeHtml(zone.scenario.scenario)}${zone.scenario.capteur ? ` (${escapeHtml(zone.scenario.capteur)})` : ""}</p>`;
+    $("#detail-body").innerHTML = html;
+  }
+
+  // ---------------------------------------------------------------- simulation et réglages
+  let simBuilt = false;
+  function renderSimulation() {
+    $("#sim-toggle").textContent = status.actif ? "Arrêter la surveillance" : "Démarrer la surveillance";
+    $("#sim-toggle").className = `button ${status.actif ? "danger" : "primary"}`;
+    const zones = status.zones.filter((z) => z.scenarios_possibles);
+    if (!simBuilt) {
+      $("#sim-rows").innerHTML = zones.map((z) => `
+        <div class="sim-row" data-sim="${escapeHtml(z.zone)}">
+          <div><b>${escapeHtml(z.nom)}</b> <span class="muted" data-current></span></div>
+          <div class="ctrls">
+            <select data-scenario>${z.scenarios_possibles.map((s) => `<option value="${escapeHtml(s.id)}"${s.id === z.scenario.scenario ? " selected" : ""}>${escapeHtml(s.libelle)}</option>`).join("")}</select>
+            ${z.liste_capteurs.length ? `<select data-sensor><option value="">capteur principal</option>${z.liste_capteurs.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.libelle)}</option>`).join("")}</select>` : ""}
+            ${z.liste_machines.length > 1 ? `<select data-sensor><option value="">toutes les machines</option>${z.liste_machines.map((m) => `<option value="${escapeHtml(z.zone + "-" + m.id)}">${escapeHtml(m.id)}</option>`).join("")}</select>` : ""}
+            <button class="button small" data-apply type="button">Appliquer</button>
+          </div>
+        </div>`).join("");
+      document.querySelectorAll("[data-sim]").forEach((row) => {
+        row.querySelector("[data-apply]").addEventListener("click", () => applyScenario(row));
+      });
+      simBuilt = true;
+    }
+    for (const z of zones) {
+      const row = document.querySelector(`[data-sim="${z.zone}"]`);
+      const label = z.scenarios_possibles.find((s) => s.id === z.scenario.scenario)?.libelle || z.scenario.scenario;
+      row.querySelector("[data-current]").textContent = `· actuel : ${label}`;
+    }
+  }
+  async function applyScenario(row) {
+    const sensor = row.querySelector("[data-sensor]")?.value || null;
+    try {
+      const result = await api("/api/zones/simulation", {
+        action: "scenario", zone: row.dataset.sim, scenario: row.querySelector("[data-scenario]").value, capteur: sensor,
+      });
+      feedback("#sim-feedback", `${result.zone} : ${result.ancien} → ${result.nouveau}${result.capteur ? ` (${result.capteur})` : ""}`, true);
+      await refresh();
+    } catch (error) { feedback("#sim-feedback", error.message, false); }
+  }
+  $("#sim-toggle").addEventListener("click", async () => {
+    try {
+      await api("/api/zones/simulation", { action: status.actif ? "arreter" : "demarrer" });
+      feedback("#sim-feedback", status.actif ? "Surveillance arrêtée." : "Surveillance démarrée.", true);
+      await refresh();
+    } catch (error) { feedback("#sim-feedback", error.message, false); }
+  });
+  function feedback(selector, message, ok) {
+    const box = $(selector);
+    box.textContent = message; box.className = `feedback ${ok ? "ok" : "err"}`;
+  }
+
+  let paramsBuilt = false;
+  function renderParameters() {
+    if (paramsBuilt || me.role !== "admin") return;
+    $("#param-rows").innerHTML = status.parametres.map((p) => `<tr>
+      <td>${escapeHtml(p.libelle)}<br><span class="muted">${p.min} à ${p.max} ${escapeHtml(p.unite)}</span></td>
+      <td class="num"><input type="number" data-param="${escapeHtml(p.nom)}" value="${p.valeur}" min="${p.min}" max="${p.max}" style="width:80px"></td></tr>`).join("");
+    paramsBuilt = true;
+  }
+  $("#param-save").addEventListener("click", async () => {
+    const changes = {};
+    document.querySelectorAll("[data-param]").forEach((input) => {
+      const current = status.parametres.find((p) => p.nom === input.dataset.param).valeur;
+      if (Number(input.value) !== current) changes[input.dataset.param] = Number(input.value);
+    });
+    if (!Object.keys(changes).length) { feedback("#param-feedback", "Aucune modification.", true); return; }
+    try {
+      const result = await api("/api/zones/parametres", { parametres: changes });
+      feedback("#param-feedback", `Enregistré : ${Object.entries(result.modifies).map(([k, v]) => `${k} = ${v}`).join(", ")}`, true);
+      status.parametres = result.parametres;
+    } catch (error) { feedback("#param-feedback", `Refusé : ${error.message}`, false); }
+  });
+
+  // ---------------------------------------------------------------- statistiques
+  async function loadStats() {
+    stats = await api(`/api/zones/stats?periode=${$("#period").value}`);
+    renderHotspots();
+    renderStats();
+    renderKpis();
+  }
+  const PERIOD_LABEL = { heure: "dernière heure", jour: "dernières 24 h", semaine: "7 derniers jours" };
+
+  // 4 indicateurs : état actuel (zones en danger, incidents ouverts, capteurs non fiables) et cumul sur la période
+  function renderKpis() {
+    if (!status) return;
+    const watched = status.zones.filter((z) => z.methode !== "hors_perimetre");
+    const danger = status.zones.filter((z) => z.niveau === "ROUGE");
+    const open = status.incidents_ouverts;
+    const byKind = {};
+    open.forEach((i) => { byKind[i.kind] = (byKind[i.kind] || 0) + 1; });
+    const unreliable = status.actif ? status.zones.flatMap((z) => (z.capteurs || []).filter((c) => !c.fiable)
+      .map((c) => `${c.libelle} (${z.nom})`)) : [];
+    const sensors = status.zones.reduce((n, z) => n + (z.liste_capteurs || []).length, 0);
+    const redTime = stats ? Object.values(stats.zones).reduce((n, z) => n + (z.temps.ROUGE || 0), 0) : null;
+    const tile = (cls, label, value, note) =>
+      `<div class="kpi ${cls}"><span>${label}</span><b>${value}</b><small title="${escapeHtml(note)}">${escapeHtml(note)}</small></div>`;
+    $("#kpis").innerHTML =
+      tile(danger.length ? "danger" : "normal", "Zones en danger", danger.length,
+           danger.length ? danger.map((z) => z.nom).join(" · ") : `aucune, sur ${watched.length} zones surveillées`) +
+      tile(open.length ? "danger" : "normal", "Incidents ouverts", open.length,
+           open.length ? Object.entries(byKind).map(([k, n]) => `${KIND_LABEL[k] || k} ${n}`).join(" · ") : "aucun incident en cours") +
+      tile(redTime ? "danger" : "normal", "Temps cumulé en danger", redTime === null ? "—" : duration(redTime),
+           `toutes zones, ${PERIOD_LABEL[$("#period").value]}`) +
+      tile(unreliable.length ? "cyber" : "normal", "Capteurs non fiables", unreliable.length,
+           unreliable.length ? unreliable.join(" · ") : status.actif ? `sur ${sensors} capteurs` : "surveillance arrêtée");
+  }
+
+  function renderStats() {
+    $("#stats-period").textContent = PERIOD_LABEL[$("#period").value];
+    const zones = status.zones.map((z) => stats.zones[z.zone]).filter(Boolean);
+    // Combien de temps en danger ? (le gris compte aussi le temps hors surveillance)
+    const parts = [["ROUGE", "danger"], ["ORANGE", "vigil"], ["VERT", "normal"], ["GRIS", "off"]];
+    $("#time-rows").innerHTML = zones.map((z) => {
+      const total = Object.values(z.temps).reduce((a, b) => a + b, 0);
+      const bar = total ? parts.map(([l, cls]) => z.temps[l]
+        ? `<i class="${cls}" style="width:${100 * z.temps[l] / total}%" title="${LEVEL_LABEL[l]} : ${duration(z.temps[l])}"></i>` : "").join("") : "";
+      return `<tr><td>${escapeHtml(z.nom)}</td><td><div class="levelbar">${bar}</div></td>
+        <td class="num">${total ? (z.temps.ROUGE ? `<b>${duration(z.temps.ROUGE)}</b>` : "0 s") : '<span class="muted">—</span>'}</td></tr>`;
+    }).join("");
+    // Où agir en priorité ? zones avec incidents ou temps en danger ; les autres sur une ligne
+    const ranked = stats.classement.map((id) => stats.zones[id]);
+    const active = ranked.filter((z) => z.total || z.temps.ROUGE);
+    const quiet = ranked.filter((z) => !z.total && !z.temps.ROUGE);
+    $("#rank-rows").innerHTML = active.map((z, index) => {
+      const kinds = Object.entries(z.incidents).filter(([, n]) => n).map(([k, n]) => categoryChip(k, n)).join(" ") || '<span class="muted">—</span>';
+      return `<tr><td class="num"><b>${index + 1}</b></td><td><b>${escapeHtml(z.nom)}</b></td><td class="num">${duration(z.temps.ROUGE)}</td>
+        <td class="num">${z.total}</td><td>${kinds}</td></tr>`;
+    }).join("") || `<tr><td colspan="5" class="muted">Aucune zone en danger ni incident sur la période.</td></tr>`;
+    $("#rank-others").textContent = quiet.length && active.length ? `Sans incident sur la période : ${quiet.map((z) => z.nom).join(" · ")}` : "";
+    // Quels gaz dépassent ? grille zones × gaz, « – » si le gaz n'est pas mesuré dans la zone
+    const gasZones = status.zones.filter((z) => z.methode === "gaz");
+    const measures = [];
+    gasZones.forEach((z) => (z.liste_capteurs || []).forEach((c) => {
+      if (!measures.some((m) => m.mesure === c.mesure)) measures.push({ mesure: c.mesure, libelle: c.libelle });
+    }));
+    $("#exceed-head").innerHTML = `<tr><th>Zone</th>${measures.map((m) => `<th class="num">${escapeHtml(m.libelle === "Température" ? "Temp." : m.libelle === "Explosivité" ? "LIE" : m.libelle)}</th>`).join("")}<th class="num">Total</th></tr>`;
+    $("#exceed-rows").innerHTML = gasZones.map((z) => {
+      const entry = stats.zones[z.zone] || { depassements: {} };
+      const measured = new Set((z.liste_capteurs || []).map((c) => c.mesure));
+      const total = Object.values(entry.depassements).reduce((a, b) => a + b, 0);
+      return `<tr><td>${escapeHtml(z.nom)}</td>${measures.map((m) => {
+        if (!measured.has(m.mesure)) return `<td class="c na" title="${escapeHtml(m.libelle)} non mesuré dans cette zone">–</td>`;
+        const n = entry.depassements[m.mesure] || 0;
+        return `<td class="c h${Math.min(n, 3)}">${n}</td>`;
+      }).join("")}<td class="num"><b>${total}</b></td></tr>`;
+    }).join("") || `<tr><td class="muted">Aucune zone gaz.</td></tr>`;
+    // Que s'est-il passé ? chronologie avec catégorie et statut
+    $("#incident-rows").innerHTML = stats.incidents_recents.slice(0, 8).map((i) => {
+      const cyber = i.kind === "capteur";
+      return `<li class="${i.fin ? "" : "open"}${cyber ? " cyber" : ""}">
+        <time>${dateTime(i.debut)}</time> · ${categoryChip(i.kind)}
+        ${i.fin ? `<span class="chip">Clos · ${duration(i.duree_s)}</span>` : `<span class="badge solid danger">En cours</span>`}
+        <div class="what"><b>${escapeHtml(i.zone_nom)}</b> — ${escapeHtml(i.raison)}</div></li>`;
+    }).join("") || `<li class="muted">Aucun incident de zone sur la période.</li>`;
+  }
+
+  // ---------------------------------------------------------------- courbes des capteurs
+  let curves = null, openCard = null, curvesBusy = false;
+  function sensorState(sensorId) {
+    if (!status?.actif) return null;
+    for (const zone of status.zones) {
+      const sensor = (zone.capteurs || []).find((c) => c.capteur === sensorId);
+      if (sensor) return sensor;
+    }
+    return null;
+  }
+  function buildCards() {
+    const box = $("#cards");
+    if (box.childElementCount) return;
+    let html = "", zone = null;
+    for (const c of curves.capteurs) {
+      if (c.zone !== zone) { zone = c.zone; html += `<div class="group">${escapeHtml(c.zone_nom)}</div>`; }
+      html += `<div class="sensor-card" data-card="${escapeHtml(c.capteur)}" tabindex="0" role="button" aria-expanded="false">
+        <div class="sensor-head"><span class="pastille GRIS" data-dot></span>
+          <div class="names"><b>${escapeHtml(c.libelle)}</b><small>${escapeHtml(c.zone_nom)}</small></div>
+          <span class="sensor-value" data-value>—</span></div>
+        <svg class="chart" data-chart role="img" aria-label="Courbe ${escapeHtml(c.libelle)} · ${escapeHtml(c.zone_nom)}"></svg>
+        <div class="sensor-legend"><div class="key" data-legend></div><p class="hint" data-note></p></div>
+      </div>`;
+    }
+    box.innerHTML = html;
+    box.querySelectorAll(".sensor-card").forEach((card) => {
+      const toggle = () => { openCard = openCard === card.dataset.card ? null : card.dataset.card; renderCurves(); };
+      card.addEventListener("click", toggle);
+      card.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); } });
+    });
+    renderCardValues();
+  }
+  function renderCardValues() {
+    document.querySelectorAll("#cards .sensor-card").forEach((card) => {
+      const sensor = sensorState(card.dataset.card);
+      const dot = card.querySelector("[data-dot]"), value = card.querySelector("[data-value]");
+      const unreliable = sensor && !sensor.fiable;
+      dot.className = `pastille ${unreliable ? "CYBER" : sensor?.niveau || "GRIS"}`;
+      dot.title = !sensor ? "hors surveillance (surveillance arrêtée)" : unreliable ? `non fiable : ${sensor.raison_fiabilite || ""}`
+        : `${LEVEL_LABEL[sensor.niveau]}${sensor.raison ? ` : ${sensor.raison}` : ""}`;
+      value.textContent = !sensor ? "—" : unreliable ? "non fiable" : `${num(sensor.valeur)} ${sensor.unite}`;
+      value.className = `sensor-value${unreliable ? " unreliable" : ""}`;
+    });
+  }
+  async function loadCurves() {
+    if (curvesBusy) return;
+    curvesBusy = true;
+    try {
+      curves = await api(`/api/zones/courbes?periode=${$("#period").value}`);
+      renderCurves();
+    } finally { curvesBusy = false; }
+  }
+  function timeLabel(t, span) {
+    const d = new Date(t);
+    if (span > 36 * 3600e3) return `${d.toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit" })} ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+    return span < 10 * 60e3 ? d.toLocaleTimeString("fr-FR") : d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  }
+  function renderCurves() {
+    if (!curves) return;
+    buildCards();
+    const start = new Date(curves.debut).getTime(), end = Math.max(new Date(curves.fin).getTime(), start + 1000);
+    $("#axis-note").textContent = `Axe du temps commun à toutes les cartes : ${timeLabel(start, end - start)} → ${timeLabel(end, end - start)}`;
+    for (const c of curves.capteurs) {
+      const card = document.querySelector(`[data-card="${c.capteur}"]`);
+      if (!card) continue;
+      const open = openCard === c.capteur;
+      card.classList.toggle("open", open);
+      card.setAttribute("aria-expanded", String(open));
+      drawChart(card.querySelector("[data-chart]"), c, start, end, open);
+      if (open) {
+        card.querySelector("[data-legend]").innerHTML = `<span><i class="line"></i>mesure${c.pas === "minute" || c.regroupement_s ? " (moyenne)" : ""}</span>` +
+          `${c.pas === "minute" || c.regroupement_s ? `<span><i class="range"></i>min – max</span>` : ""}` +
+          `<span><i class="dash"></i>seuil S-HSE-23</span>${c.seuil_max === 0 ? "" : `<span><i class="vigil"></i>zone orange</span>`}`;
+        card.querySelector("[data-note]").textContent = chartNote(c);
+      }
+    }
+  }
+  function chartNote(data) {
+    const step = data.regroupement_s;
+    const sampling = data.pas === "seconde"
+      ? (step ? `mesures à la seconde regroupées par ${duration(step)}` : "une mesure par seconde")
+      : `moyenne par minute${step ? `, regroupée par ${duration(step)}` : ""}`;
+    return `${data.libelle} (${data.unite}) · ${sampling} · ` +
+      (data.seuil_max === 0 ? `seuil S-HSE-23 : 0 ${data.unite} (toute présence au-dessus de la limite de détection compte)` :
+       data.seuil_min !== null && data.seuil_min !== undefined ? `plage S-HSE-23 : ${num(data.seuil_min)} à ${num(data.seuil_max)} ${data.unite}, orange hors de ${num(data.orange.bas)} à ${num(data.orange.haut)}` :
+       `seuil S-HSE-23 : ${num(data.seuil_max)} ${data.unite}, orange dès ${num(data.orange.haut)}`);
+  }
+  function drawChart(chart, data, start, end, big) {
+    const W = big ? 960 : 360, H = big ? 280 : 130, L = big ? 56 : 40, R = big ? 16 : 8, T = 10, B = big ? 30 : 20;
+    chart.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    chart.textContent = "";
+    if (!data.points.length) {
+      svg("text", { x: W / 2, y: H / 2 + 4, "text-anchor": "middle" }, chart).textContent = "aucune donnée sur la période";
+      return;
+    }
+    const points = data.points.map((p) => ({ t: new Date(p[0]).getTime(), v: p.length > 2 ? p[2] : p[1], lo: p.length > 2 ? p[1] : null, hi: p.length > 2 ? p[3] : null }));
+    const limits = [data.seuil_max, data.seuil_min, data.orange?.haut, data.orange?.bas].filter((v) => v !== null && v !== undefined);
+    if (data.seuil_max === 0) limits.push(0.5);
+    const values = points.flatMap((p) => [p.v, p.lo, p.hi]).filter((v) => v !== null).concat(limits);
+    let min = Math.min(...values), max = Math.max(...values);
+    if (data.seuil_min === null || data.seuil_min === undefined) min = Math.min(0, min);
+    const pad = (max - min) * 0.08 || 1; min -= data.seuil_min ? pad : 0; max += pad;
+    const x = (t) => L + (W - L - R) * (t - start) / (end - start);
+    const y = (v) => T + (H - T - B) * (1 - (v - min) / (max - min));
+    const yTicks = big ? 4 : 2, xTicks = big ? 6 : 2;
+    for (let i = 0; i <= yTicks; i++) {
+      const v = min + (max - min) * i / yTicks;
+      svg("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: "grid-line" }, chart);
+      svg("text", { x: L - 5, y: y(v) + 4, "text-anchor": "end" }, chart).textContent = num(v);
+    }
+    for (let i = 0; i <= xTicks; i++) {
+      const t = start + (end - start) * i / xTicks;
+      const anchor = i === 0 ? "start" : i === xTicks ? "end" : "middle";
+      svg("text", { x: x(t), y: H - (big ? 10 : 5), "text-anchor": anchor }, chart).textContent = timeLabel(t, end - start);
+    }
+    // zone orange et seuils
+    const band = (a, b) => svg("rect", { x: L, width: W - L - R, y: y(Math.max(a, b)), height: Math.abs(y(a) - y(b)), class: "band-orange" }, chart);
+    const hline = (v, cls) => svg("line", { x1: L, x2: W - R, y1: y(v), y2: y(v), class: cls }, chart);
+    if (data.seuil_min !== null && data.seuil_min !== undefined) {
+      band(data.seuil_min, data.orange.bas); band(data.orange.haut, data.seuil_max);
+      hline(data.seuil_min, "limit-red"); hline(data.seuil_max, "limit-red");
+      hline(data.orange.bas, "limit-orange"); hline(data.orange.haut, "limit-orange");
+    } else if (data.seuil_max === 0) {
+      hline(0, "limit-red");
+    } else {
+      band(data.orange.haut, data.seuil_max); hline(data.orange.haut, "limit-orange"); hline(data.seuil_max, "limit-red");
+    }
+    svg("line", { x1: L, x2: L, y1: T, y2: H - B, class: "axis" }, chart);
+    // une interruption (surveillance arrêtée) coupe la courbe au lieu de relier les deux bords par un trait
+    const interval = (data.regroupement_s || (data.pas === "seconde" ? 1 : 60)) * 1000;
+    const runs = [];
+    points.forEach((p, i) => {
+      if (!i || p.t - points[i - 1].t > 3 * interval + 1000) runs.push([]);
+      runs[runs.length - 1].push(p);
+    });
+    for (const run of runs) {
+      if (run[0].lo !== null) {
+        const top = run.map((p) => `${x(p.t)},${y(p.hi)}`), bottom = run.slice().reverse().map((p) => `${x(p.t)},${y(p.lo)}`);
+        svg("polygon", { points: top.concat(bottom).join(" "), class: "range" }, chart);
+      }
+      if (run.length === 1) svg("circle", { cx: x(run[0].t), cy: y(run[0].v), r: 2, fill: "#1d3326" }, chart);
+      else svg("polyline", { points: run.map((p) => `${x(p.t)},${y(p.v)}`).join(" "), class: `series${big ? "" : " thin"}` }, chart);
+    }
+  }
+
+  // ---------------------------------------------------------------- boucle
+  function renderAll() {
+    if (!status) return;
+    if (!built) buildPlan();
+    renderBanner();
+    renderPlan();
+    renderHotspots();
+    renderList();
+    renderDetail();
+    renderCardValues();
+    renderKpis();
+    if (ROLE_RANK[me.role] >= 1) renderSimulation();
+    renderParameters();
+  }
+  async function refresh() {
+    try {
+      status = await api("/api/zones/status");
+      renderAll();
+      await loadCurves();
+      showError("");
+    } catch (error) { showError(`Mise à jour impossible : ${error.message}`); }
+  }
+  async function refreshStats() {
+    try { await loadStats(); } catch (error) { showError(`Statistiques indisponibles : ${error.message}`); }
+  }
+  $("#period").addEventListener("change", () => { refreshStats(); refresh(); });
+
+  (async () => {
+    try { await loadMe(); } catch (error) { showError(error.message); return; }
+    await refresh();
+    await refreshStats();
+    setInterval(refresh, 1000);
+    setInterval(refreshStats, 5000);
+  })();
+</script>
+</body>
+</html>

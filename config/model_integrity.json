@@ -1,0 +1,10 @@
+{
+  "_comment": "Empreintes SHA-256 des poids autorisés, vérifiées avant chaque chargement (app/security/model_integrity.py). Mettre à jour uniquement pour des poids de provenance vérifiée : python -m app.security.model_integrity --update",
+  "models": {
+    "models/yolov8n_coco.pt": {
+      "sha256": "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+      "size": 6549796,
+      "recorded_at": "2026-10-29T02:16:14+00:00"
+    }
+  }
+}

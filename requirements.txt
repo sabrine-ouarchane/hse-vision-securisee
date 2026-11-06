@@ -1,0 +1,5 @@
+ultralytics>=8.0,<9
+opencv-python>=4.8
+pandas>=2.0
+pillow>=10.1
+lap>=0.5

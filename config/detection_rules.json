@@ -1,0 +1,97 @@
+{
+  "violation_confidence_thresholds": {
+    "NO-Hardhat": 0.7,
+    "NO-Safety Vest": 0.8,
+    "Phone": 0.45,
+    "NO-Harness": 0.7
+  },
+  "models": {
+    "ppe": "models/best.pt",
+    "phone": "models/yolov8n_coco.pt"
+  },
+  "inference": {
+    "device": "cpu",
+    "imgsz": 960,
+    "confidence": 0.35,
+    "track_confidence": 0.15,
+    "tracker": "config/bytetrack_hse.yaml",
+    "phone_imgsz": 416,
+    "phone_confidence": 0.3,
+    "phone_max_persons": 6,
+    "phone_min_person_height_px": 80
+  },
+  "temporal": {
+    "window_s": 2.0,
+    "min_observations": 3,
+    "min_duration_s": 1.0,
+    "confirm_ratio": 0.6,
+    "release_ratio": 0.3,
+    "present_ratio": 0.5,
+    "phone_confirm_ratio": 0.4,
+    "phone_min_hits": 2,
+    "track_expiry_s": 4.0,
+    "incident_close_after_s": 3.0,
+    "incident_merge_s": 4.0
+  },
+  "visibility": {
+    "min_person_height_ratio": 0.08,
+    "min_person_height_px": 60,
+    "edge_margin_ratio": 0.01
+  },
+  "proximity": {
+    "danger_person_heights": 1.0,
+    "warning_person_heights": 2.0,
+    "danger_m": 3.0,
+    "warning_m": 5.0,
+    "machine_ground_band_ratio": 0.35,
+    "ground_depth_weight": 2.5,
+    "max_machine_area_ratio": 0.6,
+    "machine_min_confidence": 0.4,
+    "machine_confirm_hits": 2,
+    "machine_hold_s": 2.0,
+    "confirm_window_s": 1.0,
+    "confirm_ratio": 0.6,
+    "min_observations": 2,
+    "min_duration_s": 0.5,
+    "release_s": 1.5
+  },
+  "tamper": {
+    "_comment": "Détection de sabotage caméra (app/security/tamper_detector.py). Seuils sur une image de travail en niveaux de gris de work_side_px de côté max. Un indice doit durer confirm_s pour être confirmé.",
+    "enabled": true,
+    "work_side_px": 480,
+    "min_interval_s": 0.3,
+    "reference_s": 2.0,
+    "confirm_s": 2.5,
+    "gap_tolerance_s": 1.0,
+    "release_s": 2.0,
+    "baseline_tau_s": 20.0,
+    "grid": 6,
+    "dark_mean": 20.0,
+    "uniform_std": 8.0,
+    "cell_uniform_std": 6.0,
+    "cell_texture_min": 20.0,
+    "cell_lost_ratio": 0.12,
+    "obstruction_cells_ratio": 0.45,
+    "blur_ratio": 0.05,
+    "blur_min_reference": 30.0,
+    "saturation_level": 250,
+    "glare_ratio": 0.25,
+    "freeze_diff": 0.6,
+    "displacement_interval_s": 1.0,
+    "orb_features": 600,
+    "min_inliers": 25,
+    "displacement_shift_pct": 10.0,
+    "displacement_rotation_deg": 6.5,
+    "replay_history_s": 60.0,
+    "replay_min_lag_s": 2.0,
+    "replay_match_bits": 8,
+    "replay_unique_bits": 4,
+    "replay_lag_tolerance_s": 0.75,
+    "replay_min_matches": 3,
+    "replay_window_s": 4.0
+  },
+  "rendering": {
+    "max_side_px": 1280,
+    "show_raw_detections": true
+  }
+}

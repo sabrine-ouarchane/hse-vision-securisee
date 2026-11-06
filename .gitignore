@@ -1,0 +1,84 @@
+# --- Environnement Python ---
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# --- Donnees : videos, sorties, journaux d'audit, captures avec visages ---
+data/
+archive/
+runs/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.log
+alerts_log.csv
+incidents.json
+audit*.json
+audit*.jsonl
+
+# --- Secrets et comptes ---
+.env
+.env.*
+*.key
+*.pem
+*secret*
+config/secrets/
+config/users.json
+users.json
+config/machine_states.json
+
+# --- Poids des modeles (non publies, voir README) ---
+models/
+*.pt
+*.pth
+*.onnx
+*.torchscript
+*.safetensors
+
+# --- Patchs adverses, exemples d'attaque et generateurs ---
+patch_*
+*.npz
+*adversarial*
+*adversaire*
+tools/robustness/patch.py
+tools/robustness/attacks.py
+tools/robustness/run_all.py
+tools/robustness/video.py
+
+# --- Site OCP : plan satellite, photos, logo ---
+*satellite*
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.tif
+*.tiff
+!docs/robustesse/*.png
+site_map.json
+dashboard-background.png
+dashboard/assets/ocp-logo.png
+
+# --- Documents internes (aucun document bureautique dans ce depot) ---
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+*.msg
+
+# --- Captures : seules les versions floutees, nommees *_floute.*, sont publiables ---
+docs/captures/*
+!docs/captures/*_floute.png
+!docs/captures/*_floute.jpg
+patch_*
+
+# --- Systeme / editeur ---
+.vscode/
+.idea/
+.claude/
+Thumbs.db
+.DS_Store
