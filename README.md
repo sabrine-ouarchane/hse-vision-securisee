@@ -77,6 +77,16 @@ Ces résultats montrent des mécanismes et des ordres de grandeur, obtenus sur u
 
 Les générateurs d'attaques, les patchs adverses et les exemples d'attaque ne sont pas publiés.
 
+## Captures
+
+Détection d'une obstruction de l'objectif lors d'une attaque simulée : la caméra passe en « surveillance compromise » et un incident cyber est ouvert.
+
+![Obstruction de l'objectif détectée pendant une attaque simulée](docs/captures/sabotage_floute.png)
+
+Matrice de confusion normalisée du modèle :
+
+![Matrice de confusion normalisée](docs/captures/matrice_confusion_floute.png)
+
 ## Poids du modèle
 
 **Les poids entraînés (`models/best.pt`) ne sont pas publiés, par choix de confidentialité.** L'étude de robustesse montre que les attaques optimisées (perturbations et patchs) reposent sur la connaissance des poids : les diffuser les faciliterait directement. Le contrôle d'intégrité empêche de modifier un modèle, pas de le lire.
